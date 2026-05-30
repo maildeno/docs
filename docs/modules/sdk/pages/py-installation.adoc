@@ -1,0 +1,122 @@
+= Installation & Setup
+:description: Install and configure the Maildeno Python SDK.
+
+== Install
+
+[source,bash]
+----
+pip install maildeno
+# or
+poetry add maildeno
+# or
+uv add maildeno
+----
+
+Requires **Python 3.9+** and **`httpx >= 0.28.1, < 1.0`** (installed automatically).
+
+== Configure the client
+
+=== Synchronous
+
+[source,python]
+----
+import os
+from maildeno import MaildenoClient
+
+client = MaildenoClient(
+    # Required — obtain from Dashboard → API Keys → Create Key
+    api_key=os.environ["MAILDENO_API_KEY"],
+
+    # Optional — timeout in seconds, defaults to 30.0
+    timeout=10.0,
+)
+----
+
+=== Asynchronous
+
+[source,python]
+----
+import os
+from maildeno import AsyncMaildenoClient
+
+client = AsyncMaildenoClient(
+    api_key=os.environ["MAILDENO_API_KEY"],
+    timeout=10.0,
+)
+----
+
+== Configuration options
+
+[cols="1,1,1,3",options=header]
+|===
+|Option|Type|Default|Description
+
+|`api_key`
+|`str`
+|—
+|**Required.** Your Maildeno API key.
+
+|`timeout`
+|`float`
+|`30.0`
+|Request timeout in seconds. Raises `TIMEOUT` if exceeded.
+
+|`http_client`
+|`httpx.Client` / `httpx.AsyncClient`
+|—
+|Bring your own `httpx` client. See <<byoc>> below.
+|===
+
+== Client lifecycle
+
+For long-lived applications (web servers, workers), instantiate *once* at startup and reuse:
+
+[source,python]
+----
+# module-level — reused across all requests
+maildeno = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"])
+----
+
+For short-lived scripts, use the context manager so the underlying connection is closed cleanly:
+
+[source,python]
+----
+with MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"]) as client:
+    html = client.render_html("template-id")
+# httpx transport is closed here
+----
+
+[source,python]
+----
+async with AsyncMaildenoClient(api_key=os.environ["MAILDENO_API_KEY"]) as client:
+    html = await client.render_html("template-id")
+----
+
+[#byoc]
+== Bring your own `httpx` client
+
+For advanced use cases — custom proxies, mTLS, retries, observability hooks — inject a pre-configured `httpx` client:
+
+[source,python]
+----
+import httpx
+from maildeno import MaildenoClient
+
+http = httpx.Client(
+    timeout=15.0,
+    transport=httpx.HTTPTransport(retries=3),
+    headers={"X-Tenant-Id": "acme-corp"},
+)
+
+client = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"], http_client=http)
+
+# You own the lifecycle when you inject a client — close it yourself
+# ...
+http.close()
+----
+
+WARNING: When you inject an HTTP client, the SDK will not close it. You are responsible for its lifecycle.
+
+== Environment variables
+
+The SDK does not read any environment variables itself. Pass values explicitly through the constructor and load them with `os.environ`, `pydantic-settings`, `python-decouple`, or your project's preferred loader.

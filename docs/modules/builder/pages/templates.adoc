@@ -1,0 +1,78 @@
+= Templates
+:description: Managing templates in the Maildeno dashboard — creation, versioning, duplication, and publishing.
+
+Templates are the central design artefact in Maildeno. Each template has a unique ID, a draft state, and a published state.
+
+image::template-library.png[Template library showing a grid of email templates,role=center,width=100%]
+
+== Creating a template
+
+. In the dashboard, go to **Templates**.
+. Click **New Template**.
+. Choose a blank canvas or a pre-built starter layout.
+. Give the template a name — this is shown only in the dashboard.
+
+== Template ID
+
+Every template is assigned a UUID at creation, for example:
+
+----
+550e8400-e29b-41d4-a716-446655440000
+----
+
+This ID is stable — it never changes even if you rename or republish the template. Pass it to the SDK or REST API to render the template.
+
+.Find the Template ID
+Copy it from **Template Settings → Template ID** in the top-right corner of the editor.
+
+== Draft vs published
+
+Maildeno maintains two independent versions of each template:
+
+[cols="1,3",options=header]
+|===
+|Version|Description
+
+|**Draft**
+|The version you're currently editing. Changes are saved here and do not affect live renders.
+
+|**Published**
+|The version served by the Render API. Update it by clicking **Publish**.
+|===
+
+WARNING: Clicking **Publish** replaces the published version immediately. All render calls using this template ID will reflect the new version. Validate in a staging environment first.
+
+== Duplicating a template
+
+. Open a template in the editor.
+. Click **···** (overflow menu) → **Duplicate**.
+. The duplicate gets a new Template ID.
+
+Duplication is useful for creating variations (e.g. one template per locale or per plan tier) while sharing a common structure.
+
+== Deleting a template
+
+. Go to **Template Settings** → **Danger Zone** → **Delete Template**.
+. Confirm the deletion.
+
+CAUTION: Deleting a template is permanent. Any application code referencing its ID will receive a `TEMPLATE_NOT_FOUND` error.
+
+== Tagging and organising
+
+Apply tags to templates from the template library to keep large collections manageable. Tags are for dashboard organisation only and have no effect on rendering.
+
+== Template limits
+
+[cols="1,1",options=header]
+|===
+|Plan|Template limit
+
+|Free
+|5 templates
+
+|Pro
+|Unlimited
+
+|Enterprise
+|Unlimited + custom domains
+|===

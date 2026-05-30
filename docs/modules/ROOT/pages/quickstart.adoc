@@ -1,0 +1,137 @@
+= Quickstart
+:description: Get from zero to a rendered email in under five minutes.
+
+This guide walks you from creating a template in the Maildeno builder to rendering it in your application.
+
+== Prerequisites
+
+* A {dashboard-url}[Maildeno account] (free tier available)
+* Node.js ≥ 18 **or** Python ≥ 3.9 — pick whichever fits your stack
+
+== Step 1 — Create a template
+
+. Log in to the {dashboard-url}[Maildeno Dashboard].
+. Navigate to **Templates → New Template**.
+. Drag a *Heading* block and a *Text* block onto the canvas.
+. In the heading block, type `Hello {{ name }}` — this is a xref:builder:merge-tags.adoc[merge tag].
+. Click **Save**.
+
+image::builder:editor-new-template.png[Creating a new template in the editor,role=center,width=100%]
+
+. Copy the **Template ID** from the template settings panel (it looks like `550e8400-e29b-41d4-a716-446655440000`).
+
+== Step 2 — Create an API key
+
+. Go to **Dashboard → API Keys → Create Key**.
+. Give it a name (e.g. `quickstart-key`) and leave **Targets** set to `All`.
+. Copy the generated key — you'll only see it once.
+
+WARNING: Never commit API keys to source control. Use environment variables or a secrets manager.
+
+== Step 3 — Install the SDK
+
+[tabs]
+====
+JavaScript / TypeScript::
++
+[source,bash]
+----
+npm install maildeno
+----
+
+Python::
++
+[source,bash]
+----
+pip install maildeno
+----
+====
+
+== Step 4 — Render your first email
+
+Replace `<YOUR_API_KEY>` and `<YOUR_TEMPLATE_ID>` with your actual values.
+
+[tabs]
+====
+JavaScript / TypeScript::
++
+[source,typescript]
+----
+import { MaildenoClient } from "maildeno"
+
+const client = new MaildenoClient({
+  apiKey: process.env.MAILDENO_API_KEY!, // <1>
+})
+
+const html = await client.renderHtml(
+  "<YOUR_TEMPLATE_ID>",
+  {
+    merge_tags: {
+      text: { name: "Noruwa" }, // <2>
+    },
+  }
+)
+
+console.log(html) // <!DOCTYPE html>...
+----
+<1> Load your API key from an environment variable — never hard-code it.
+<2> The `name` merge tag fills in the `{{ name }}` placeholder in your template.
+
+Python (sync)::
++
+[source,python]
+----
+import os
+from maildeno import MaildenoClient
+
+client = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"])  # <1>
+
+html = client.render_html(
+    "<YOUR_TEMPLATE_ID>",
+    {
+        "merge_tags": {
+            "text": {"name": "Noruwa"},  # <2>
+        },
+    },
+)
+
+print(html)  # <!DOCTYPE html>...
+----
+<1> Load your API key from an environment variable.
+<2> Fills in the `{{ name }}` merge tag.
+
+Python (async)::
++
+[source,python]
+----
+import asyncio
+import os
+from maildeno import AsyncMaildenoClient
+
+async def main():
+    async with AsyncMaildenoClient(api_key=os.environ["MAILDENO_API_KEY"]) as client:
+        html = await client.render_html(
+            "<YOUR_TEMPLATE_ID>",
+            {"merge_tags": {"text": {"name": "Noruwa"}}},
+        )
+        print(html)
+
+asyncio.run(main())
+----
+====
+
+You should see a complete HTML document printed to stdout. 🎉
+
+== Next steps
+
+[cols="1,1",frame=none,grid=none]
+|===
+a|
+* xref:builder:merge-tags.adoc[Learn about merge tags]
+* xref:builder:visibility-rules.adoc[Add visibility rules]
+* xref:builder:exporting.adoc[Choose an export target]
+a|
+* xref:sdk:js-rendering.adoc[Full JS SDK rendering reference]
+* xref:sdk:py-rendering.adoc[Full Python SDK rendering reference]
+* xref:sdk:error-codes.adoc[Handle errors gracefully]
+|===

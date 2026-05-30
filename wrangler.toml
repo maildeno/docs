@@ -1,0 +1,43 @@
+# wrangler.toml
+# Cloudflare Pages project configuration for Maildeno Docs.
+#
+# This file is read by Wrangler CLI during local `wrangler pages dev`
+# and is referenced by the GitHub Actions deploy step.
+#
+# ⚠️  Do NOT store secrets here. Use:
+#   - GitHub Actions secrets for CI/CD
+#   - `wrangler secret put` for manually managed secrets
+#   - .dev.vars for local development (add to .gitignore)
+
+name = "maildeno-docs"
+
+# Pages-specific configuration
+pages_build_output_dir = "build/site"
+
+compatibility_date = "2024-12-01"
+compatibility_flags = []
+
+# ──────────────────────────────────────────────────────────────
+# Environment: Production
+# ──────────────────────────────────────────────────────────────
+[env.production]
+name = "maildeno-docs"
+
+# Custom domain — set this after creating the Pages project
+# routes = [
+#   { pattern = "docs.maildeno.com", custom_domain = true }
+# ]
+
+[env.production.vars]
+ENVIRONMENT = "production"
+DOCS_VERSION = "latest"
+
+# ──────────────────────────────────────────────────────────────
+# Environment: Staging / Preview
+# ──────────────────────────────────────────────────────────────
+[env.staging]
+name = "maildeno-docs-staging"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+DOCS_VERSION = "preview"

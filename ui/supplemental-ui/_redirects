@@ -1,0 +1,20 @@
+# build/site/_redirects is not used — place this in ui/supplemental-ui instead.
+# Cloudflare Pages reads _redirects from the root of the published directory.
+#
+# File: ui/supplemental-ui/_redirects
+# This file is copied verbatim into the site root by Antora's supplemental UI.
+
+# ── Canonical short-links ──────────────────────────────────────────────────
+/quickstart      /maildeno/quickstart.html      301
+/sdk             /maildeno/sdk/overview.html    301
+/sdk/js          /maildeno/sdk/javascript.html  301
+/sdk/python      /maildeno/sdk/python.html      301
+/builder         /maildeno/builder/overview.html 301
+
+# ── Legacy URL support (update if you rename pages) ───────────────────────
+# /old-path        /new-path                      301
+
+# ── 404 fallback ──────────────────────────────────────────────────────────
+# Antora generates static HTML so there is no SPA shell — let CF Pages
+# serve its own 404 page, or provide a custom one:
+# /404.html        /404.html                      404

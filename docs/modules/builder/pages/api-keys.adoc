@@ -1,0 +1,72 @@
+= API Keys
+:description: Create and manage Maildeno API keys from the dashboard.
+
+API keys authenticate every request to the Render API. Keys are created in the Maildeno dashboard and can be scoped to specific render targets.
+
+== Creating a key
+
+. Go to **Dashboard → API Keys → Create Key**.
+. Enter a descriptive name (e.g. `production-html`, `staging-all`).
+. Select the **Targets** this key is allowed to render.
+. Click **Create**.
+. Copy the key — it is shown only once.
+
+image::api-keys-create.png[API key creation dialog showing name and targets fields,role=center,width=80%]
+
+WARNING: Store keys in a secrets manager or environment variables. Never commit them to source control or expose them in client-side code.
+
+== Target scopes
+
+[cols="1,2",options=header]
+|===
+|Targets value|Allowed render calls
+
+|`["all"]`
+|`html`, `react-email`, `mjml`
+
+|`["html"]`
+|`html` only — `react-email` and `mjml` return `403 FORBIDDEN`
+
+|`["html", "mjml"]`
+|`html` and `mjml` — `react-email` returns `403 FORBIDDEN`
+|===
+
+== Rotating a key
+
+. Go to **Dashboard → API Keys**.
+. Click **···** next to the key → **Rotate**.
+. A new key is generated. The old key is immediately revoked.
+
+CAUTION: Rotate one service at a time. Update the new key in your application *before* revoking the old one in a high-availability environment.
+
+== Revoking a key
+
+. Go to **Dashboard → API Keys**.
+. Click **···** next to the key → **Revoke**.
+. Confirm. Requests using the revoked key will immediately receive `401 INVALID_API_KEY`.
+
+== Key naming conventions (recommended)
+
+Use a consistent naming scheme to make key management easier at scale:
+
+[source]
+----
+{environment}-{service}-{target}
+
+Examples:
+  production-backend-html
+  staging-newsletter-service-all
+  ci-test-runner-html
+----
+
+== Creating keys via the REST API
+
+[source,bash]
+----
+curl -X POST {api-base-url}/api/v1/keys \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ADMIN_KEY>" \
+  -d '{"name": "HTML only", "targets": ["html"]}'
+----
+
+See xref:sdk:api-keys.adoc[SDK: API Key Scopes] for the full reference.

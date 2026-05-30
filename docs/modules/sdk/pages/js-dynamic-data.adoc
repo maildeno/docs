@@ -1,0 +1,126 @@
+= Dynamic Data
+:description: Supply merge tags and context to the Maildeno JavaScript SDK at render time.
+
+Dynamic data controls what goes *into* the rendered email (merge tags) and what is shown or hidden (context / visibility rules).
+
+== Structure
+
+[source,typescript]
+----
+type DynamicData = {
+  merge_tags?: {
+    text?: Record<string, string>  // paragraph, heading, button text
+    url?:  Record<string, string>  // href, src, image URLs
+    attr?: Record<string, string>  // alt, aria-label, etc.
+  }
+  context?: Record<string, string | number | boolean>
+}
+----
+
+All fields are optional — include only what your template uses.
+
+== Merge tags
+
+=== `text` — inline content
+
+[source,typescript]
+----
+await client.renderHtml("template-id", {
+  merge_tags: {
+    text: {
+      name:       "Noruwa",
+      company:    "Maildeno",
+      reset_name: "Password",
+    },
+  },
+})
+----
+
+Values are **HTML-escaped** before insertion.
+
+=== `url` — links and image sources
+
+[source,typescript]
+----
+await client.renderHtml("template-id", {
+  merge_tags: {
+    url: {
+      reset_url:    "https://app.example.com/reset/abc123",
+      banner_image: "https://cdn.example.com/banner.jpg",
+    },
+  },
+})
+----
+
+Values are **URL percent-encoded** before insertion.
+
+=== `attr` — HTML attributes
+
+[source,typescript]
+----
+await client.renderHtml("template-id", {
+  merge_tags: {
+    attr: {
+      alt_text:   "Monthly promotion banner",
+      aria_label: "Open the dashboard",
+    },
+  },
+})
+----
+
+Values are **HTML attribute-safe** encoded before insertion.
+
+== Context
+
+Context drives xref:builder:visibility-rules.adoc[visibility rules] — it controls which rows are shown or hidden. Values are never injected into content.
+
+[source,typescript]
+----
+await client.renderHtml("template-id", {
+  context: {
+    plan:         "pro",          // string
+    country:      "usa",          // string
+    age:          25,             // number
+    is_verified:  true,           // boolean
+    country_rank: "2",            // number-as-string is also fine
+  },
+})
+----
+
+== All options together
+
+[source,typescript]
+----
+await client.render({
+  templateId: "550e8400-e29b-41d4-a716-446655440000",
+  target: "mjml",
+  dynamicData: {
+    merge_tags: {
+      text: {
+        name:       "Noruwa",
+        company:    "Maildeno",
+        reset_name: "Password",
+      },
+      url: {
+        reset_url: "https://app.example.com/reset/abc123",
+      },
+      attr: {
+        alt_text: "Cave image",
+      },
+    },
+    context: {
+      country:      "usa",
+      country_rank: "2",
+      expiry:       "2028",
+    },
+  },
+})
+----
+
+== Missing and extra values
+
+* A merge tag in the template with no supplied value renders as an empty string.
+* A supplied value for a tag not present in the template is silently ignored.
+* Context keys not matched by any visibility rule are silently ignored.
+
+See xref:builder:merge-tags.adoc[Merge Tags] and xref:builder:visibility-rules.adoc[Visibility Rules] for the builder-side documentation.

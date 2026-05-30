@@ -1,0 +1,160 @@
+= Merge Tags
+:description: Inject dynamic content into your email templates at render time using merge tags.
+:attribute-missing: skip
+
+Merge tags are `{{ placeholder }}` tokens you embed in template content. At render time, you supply values for each tag and the Render API substitutes them before returning the output.
+
+== Tag syntax
+
+Merge tags use double curly braces:
+
+[source]
+----
+Hello {{ name }}, your plan is {{ plan_label }}.
+----
+
+Spaces inside the braces are optional but recommended for readability: `+{{ name }}+` and `+{{name}}+` are both valid.
+
+== Tag types
+
+Three tag types are supported, each applied to different parts of the template and escaped differently.
+
+=== `text` — inline content
+
+Use `text` tags for any visible copy: headings, paragraphs, list items, button labels.
+
+*Escaping:* HTML-escaped. Characters like `<`, `>`, `&`, `"` are converted to their HTML entities to prevent injection.
+
+[source,typescript]
+----
+merge_tags: {
+  text: {
+    name: "Noruwa",
+    company: "Maildeno",
+    reset_name: "Password",
+  },
+}
+----
+
+Inserts into template content like:
+
+[source]
+----
+Hi {{ name }}, welcome to {{ company }}.
+Click the {{ reset_name }} Reset button below.
+----
+
+=== `url` — links and image sources
+
+Use `url` tags for any `href` or `src` attribute in the template.
+
+*Escaping:* URL percent-encoded. Ensures safe URL characters regardless of the input string.
+
+[source,typescript]
+----
+merge_tags: {
+  url: {
+    reset_url:    "https://app.example.com/reset/abc123",
+    banner_image: "https://cdn.example.com/banners/promo.jpg",
+  },
+}
+----
+
+=== `attr` — HTML attributes
+
+Use `attr` tags for any other HTML attribute — `alt` text, `aria-label`, `title`, etc.
+
+*Escaping:* HTML attribute-safe encoding.
+
+[source,typescript]
+----
+merge_tags: {
+  attr: {
+    alt_text:   "Monthly promotion banner",
+    aria_label: "Open the dashboard",
+  },
+}
+----
+
+== Inserting merge tags in the editor
+
+. Select a text block or attribute field in the settings panel.
+. Click the **`{{ }}`** button in the toolbar.
+. Type the tag name and confirm.
+
+The editor shows merge tags highlighted in orange so they're easy to spot.
+
+image::merge-tags-in-editor.png[Merge tag highlighted in the editor canvas,role=center,width=80%]
+
+== Missing and extra tags
+
+[cols="2,3",options=header]
+|===
+|Scenario|Behaviour
+
+|A merge tag is in the template but *not* supplied at render time
+|The tag renders as an empty string (no error).
+
+|A value is supplied for a tag that *does not appear* in the template
+|It is silently ignored.
+
+|A `text` value contains HTML
+|The HTML is escaped — it will appear as literal characters, not rendered markup. Use the `HTML` block type for raw HTML content.
+|===
+
+== Full example
+
+[tabs]
+====
+JavaScript::
++
+[source,typescript]
+----
+await client.render({
+  templateId: "550e8400-e29b-41d4-a716-446655440000",
+  target: "html",
+  dynamicData: {
+    merge_tags: {
+      text: {
+        name:       "Noruwa",
+        company:    "Maildeno",
+        reset_name: "Password",
+      },
+      url: {
+        reset_url:    "https://app.example.com/reset/abc123",
+        banner_image: "https://cdn.example.com/banner.jpg",
+      },
+      attr: {
+        alt_text: "Cave image",
+      },
+    },
+  },
+})
+----
+
+Python::
++
+[source,python]
+----
+client.render(
+    template_id="550e8400-e29b-41d4-a716-446655440000",
+    target="html",
+    dynamic_data={
+        "merge_tags": {
+            "text": {
+                "name":       "Noruwa",
+                "company":    "Maildeno",
+                "reset_name": "Password",
+            },
+            "url": {
+                "reset_url":    "https://app.example.com/reset/abc123",
+                "banner_image": "https://cdn.example.com/banner.jpg",
+            },
+            "attr": {
+                "alt_text": "Cave image",
+            },
+        },
+    },
+)
+----
+====

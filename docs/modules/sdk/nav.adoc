@@ -1,0 +1,18 @@
+// modules/sdk/nav.adoc
+* SDK Reference
+** xref:sdk:overview.adoc[Overview]
+** xref:sdk:javascript.adoc[JavaScript / TypeScript]
+*** xref:sdk:js-installation.adoc[Installation]
+*** xref:sdk:js-rendering.adoc[Rendering]
+*** xref:sdk:js-dynamic-data.adoc[Dynamic Data]
+*** xref:sdk:js-error-handling.adoc[Error Handling]
+*** xref:sdk:js-environments.adoc[Environments]
+** xref:sdk:python.adoc[Python]
+*** xref:sdk:py-installation.adoc[Installation]
+*** xref:sdk:py-rendering.adoc[Rendering]
+*** xref:sdk:py-dynamic-data.adoc[Dynamic Data]
+*** xref:sdk:py-error-handling.adoc[Error Handling]
+*** xref:sdk:py-environments.adoc[Frameworks & Environments]
+** xref:sdk:rest-api.adoc[REST API]
+** xref:sdk:error-codes.adoc[Error Codes]
+** xref:sdk:api-keys.adoc[API Key Scopes]

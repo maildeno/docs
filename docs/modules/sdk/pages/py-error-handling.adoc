@@ -1,0 +1,143 @@
+= Error Handling
+:description: Handle errors from the Maildeno Python SDK using MaildenoError.
+
+All errors raised by the SDK are instances of `MaildenoError`.
+
+== Basic pattern
+
+[source,python]
+----
+from maildeno import MaildenoClient, MaildenoError
+
+client = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"])
+
+try:
+    html = client.render_html("template-id")
+except MaildenoError as err:
+    print(f"[{err.code}] {err.message} (HTTP {err.status})")
+----
+
+== Error properties
+
+[cols="1,1,3",options=header]
+|===
+|Property|Type|Description
+
+|`code`
+|`SdkErrorCode`
+|Machine-readable error code. See <<error-codes>> below.
+
+|`message`
+|`str`
+|Human-readable description from the API.
+
+|`status`
+|`int`
+|HTTP status code. `0` for `NETWORK_ERROR` and `TIMEOUT`.
+
+|`issues`
+|`list[ValidationIssue] \| None`
+|Populated on `422` validation errors. See <<validation-errors>>.
+|===
+
+[#error-codes]
+== Error codes
+
+[cols="1,1,3",options=header]
+|===
+|Code|HTTP status|When it occurs
+
+|`INVALID_API_KEY`
+|`401`
+|Key is missing, malformed, revoked, or expired.
+
+|`FORBIDDEN`
+|`403`
+|Key scope does not include the requested target.
+
+|`TEMPLATE_NOT_FOUND`
+|`404`
+|The `template_id` does not exist or was deleted.
+
+|`RENDER_ERROR`
+|`422`
+|Template data is invalid or the render pipeline failed.
+
+|`NETWORK_ERROR`
+|`0`
+|`httpx` transport error — DNS failure, connection refused, etc.
+
+|`TIMEOUT`
+|`0`
+|Request exceeded the configured timeout.
+|===
+
+== Full handler pattern
+
+[source,python]
+----
+try:
+    html = client.render_html("template-id")
+except MaildenoError as err:
+    if err.code == "INVALID_API_KEY":
+        print("Check your API key in the dashboard")
+    elif err.code == "FORBIDDEN":
+        print("Key scope:", err.message)
+    elif err.code == "TEMPLATE_NOT_FOUND":
+        print("Template not found — check the template ID")
+    elif err.code == "RENDER_ERROR":
+        print("Render failed:", err.message)
+        if err.issues:
+            for issue in err.issues:
+                print(".".join(map(str, issue["loc"])), issue["msg"])
+    elif err.code == "NETWORK_ERROR":
+        print("Network error — check connectivity")
+    elif err.code == "TIMEOUT":
+        print("Request timed out — consider increasing timeout")
+----
+
+[#validation-errors]
+== Validation errors (`err.issues`)
+
+[source,python]
+----
+try:
+    client.render_html("not-a-uuid")
+except MaildenoError as err:
+    if err.issues:
+        for issue in err.issues:
+            print(".".join(map(str, issue["loc"])), issue["msg"])
+            # → body.template_id  Input should be a valid UUID, ...
+----
+
+=== `ValidationIssue` TypedDict
+
+[source,python]
+----
+class ValidationIssue(TypedDict):
+    loc:  list[str | int]  # e.g. ["body", "template_id"]
+    msg:  str              # human-readable message
+    type: str              # pydantic error type
+----
+
+== FastAPI exception handler
+
+[source,python]
+----
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from maildeno import MaildenoError
+
+async def maildeno_exception_handler(request: Request, exc: MaildenoError):
+    return JSONResponse(
+        status_code=exc.status or 500,
+        content={
+            "error":   exc.code,
+            "message": exc.message,
+            "issues":  exc.issues or [],
+        },
+    )
+
+# Register it
+app.add_exception_handler(MaildenoError, maildeno_exception_handler)
+----

@@ -1,0 +1,123 @@
+= Rendering
+:description: Render email templates using the Maildeno JavaScript SDK.
+
+The SDK exposes two rendering surfaces: a full-control `render()` method and three convenience shorthand methods.
+
+== Convenience methods
+
+The fastest way to render. Each returns the output string directly.
+
+[source,typescript]
+----
+// Render as HTML
+const html = await client.renderHtml("template-id")
+
+// Render as React Email (TSX)
+const tsx = await client.renderReact("template-id")
+
+// Render as MJML
+const mjml = await client.renderMjml("template-id")
+----
+
+All three accept an optional `dynamicData` argument:
+
+[source,typescript]
+----
+const html = await client.renderHtml("template-id", {
+  merge_tags: { text: { name: "Noruwa" } },
+  context:    { plan: "pro" },
+})
+----
+
+== `render()` — full control
+
+Use `render()` when you need access to the full result object or want to specify the target programmatically.
+
+[source,typescript]
+----
+const result = await client.render({
+  templateId:  "550e8400-e29b-41d4-a716-446655440000",
+  target:      "html",        // "html" | "react-email" | "mjml"
+  dynamicData: {
+    merge_tags: { text: { name: "Noruwa" } },
+    context:    { plan: "pro" },
+  },
+})
+
+console.log(result.output)      // rendered string
+console.log(result.target)      // "html"
+console.log(result.templateId)  // "550e8400-..."
+----
+
+=== `RenderOptions`
+
+[cols="1,1,1,3",options=header]
+|===
+|Field|Type|Required|Description
+
+|`templateId`
+|`string` (UUID)
+|✓
+|The template to render.
+
+|`target`
+|`RenderTarget`
+|
+|`"html"` (default), `"react-email"`, or `"mjml"`.
+
+|`dynamicData`
+|`DynamicData`
+|
+|Merge tags and context values. See xref:js-dynamic-data.adoc[Dynamic Data].
+|===
+
+=== `RenderResult`
+
+[cols="1,1,3",options=header]
+|===
+|Field|Type|Description
+
+|`output`
+|`string`
+|The rendered template string.
+
+|`target`
+|`RenderTarget`
+|The target format used.
+
+|`templateId`
+|`string`
+|The template UUID that was rendered.
+|===
+
+== Choosing a target dynamically
+
+[source,typescript]
+----
+import type { RenderTarget } from "maildeno"
+
+async function render(templateId: string, target: RenderTarget, name: string) {
+  return client.render({
+    templateId,
+    target,
+    dynamicData: {
+      merge_tags: { text: { name } },
+    },
+  })
+}
+
+const html  = await render("template-id", "html",         "Noruwa")
+const react = await render("template-id", "react-email",  "Noruwa")
+const mjml  = await render("template-id", "mjml",         "Noruwa")
+----
+
+== Without dynamic data
+
+If your template has no merge tags or visibility rules, omit `dynamicData` entirely:
+
+[source,typescript]
+----
+const html = await client.renderHtml("template-id")
+// or
+const result = await client.render({ templateId: "template-id" })
+----

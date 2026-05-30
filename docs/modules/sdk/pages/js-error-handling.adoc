@@ -1,0 +1,162 @@
+= Error Handling
+:description: Handle errors from the Maildeno JavaScript SDK using MaildenoError.
+
+All errors thrown by the SDK are instances of `MaildenoError`. Use `instanceof` to distinguish them from unexpected runtime errors.
+
+== Basic pattern
+
+[source,typescript]
+----
+import { MaildenoClient, MaildenoError } from "maildeno"
+
+const client = new MaildenoClient({ apiKey: process.env.MAILDENO_API_KEY! })
+
+try {
+  const html = await client.renderHtml("template-id")
+} catch (err) {
+  if (err instanceof MaildenoError) {
+    console.error(`[${err.code}] ${err.message} (HTTP ${err.status})`)
+  } else {
+    throw err // re-throw unexpected errors
+  }
+}
+----
+
+== Error properties
+
+[cols="1,1,3",options=header]
+|===
+|Property|Type|Description
+
+|`code`
+|`SdkErrorCode`
+|Machine-readable error code. See <<error-codes>> below.
+
+|`message`
+|`string`
+|Human-readable description from the API.
+
+|`status`
+|`number`
+|HTTP status code. `0` for `NETWORK_ERROR` and `TIMEOUT`.
+
+|`issues`
+|`ValidationIssue[] \| undefined`
+|Populated on `422` validation errors. See <<validation-errors>>.
+|===
+
+[#error-codes]
+== Error codes
+
+[cols="1,1,3",options=header]
+|===
+|Code|HTTP status|When it occurs
+
+|`INVALID_API_KEY`
+|`401`
+|Key is missing, malformed, revoked, or expired.
+
+|`FORBIDDEN`
+|`403`
+|Key does not have scope for the requested target. See xref:api-keys.adoc[API Key Scopes].
+
+|`TEMPLATE_NOT_FOUND`
+|`404`
+|The `templateId` does not exist or was deleted.
+
+|`RENDER_ERROR`
+|`422`
+|Template data is invalid or the render pipeline failed.
+
+|`NETWORK_ERROR`
+|`0`
+|`fetch()` threw — no internet, DNS failure, connection refused.
+
+|`TIMEOUT`
+|`0`
+|Request exceeded the configured `timeout` (default: 30 seconds).
+|===
+
+== Switch-based handler
+
+[source,typescript]
+----
+try {
+  const html = await client.renderHtml("template-id")
+} catch (err) {
+  if (!(err instanceof MaildenoError)) throw err
+
+  switch (err.code) {
+    case "INVALID_API_KEY":
+      console.error("Check your API key in the dashboard")
+      break
+    case "FORBIDDEN":
+      console.error("Key scope:", err.message)
+      break
+    case "TEMPLATE_NOT_FOUND":
+      console.error("Template not found — check the template ID")
+      break
+    case "RENDER_ERROR":
+      console.error("Render failed:", err.message)
+      if (err.issues) {
+        err.issues.forEach(i => console.error(i.loc.join("."), i.msg))
+      }
+      break
+    case "NETWORK_ERROR":
+      console.error("Network error — retrying may help")
+      break
+    case "TIMEOUT":
+      console.error("Request timed out — consider increasing the timeout")
+      break
+  }
+}
+----
+
+[#validation-errors]
+== Validation errors (`err.issues`)
+
+When the API rejects a request because the input is malformed — for example, a `templateId` that is not a valid UUID — the SDK populates `err.issues` with every pydantic validation issue:
+
+[source,typescript]
+----
+try {
+  await client.renderHtml("not-a-uuid")
+} catch (err) {
+  if (err instanceof MaildenoError && err.issues) {
+    for (const issue of err.issues) {
+      console.error(issue.loc.join("."), issue.msg)
+      // → body.template_id  Input should be a valid UUID, ...
+    }
+  }
+}
+----
+
+=== `ValidationIssue` type
+
+[source,typescript]
+----
+type ValidationIssue = {
+  loc: (string | number)[]  // e.g. ["body", "template_id"]
+  msg: string               // human-readable message
+  type: string              // pydantic error type
+}
+----
+
+== Express middleware example
+
+[source,typescript]
+----
+import { MaildenoError } from "maildeno"
+import type { ErrorRequestHandler } from "express"
+
+export const maildenoErrorHandler: ErrorRequestHandler = (err, req, res, next) => {
+  if (err instanceof MaildenoError) {
+    return res.status(err.status || 500).json({
+      error:   err.code,
+      message: err.message,
+      issues:  err.issues ?? [],
+    })
+  }
+  next(err)
+}
+----

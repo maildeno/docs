@@ -1,0 +1,60 @@
+= JavaScript / TypeScript SDK
+:description: Official Maildeno JavaScript and TypeScript SDK reference.
+
+The `maildeno` npm package is the official JavaScript and TypeScript SDK for the Maildeno Render API.
+
+[source,bash]
+----
+npm install maildeno
+----
+
+Requires Node.js 18+ (or any runtime with native `fetch` — Bun, Deno, Cloudflare Workers, browser via a server proxy).
+
+== Pages in this section
+
+* xref:js-installation.adoc[Installation & Setup]
+* xref:js-rendering.adoc[Rendering]
+* xref:js-dynamic-data.adoc[Dynamic Data (merge tags & context)]
+* xref:js-error-handling.adoc[Error Handling]
+* xref:js-environments.adoc[Environments & Frameworks]
+
+== 30-second example
+
+[source,typescript]
+----
+import { MaildenoClient } from "maildeno"
+
+const client = new MaildenoClient({
+  apiKey: process.env.MAILDENO_API_KEY!,
+})
+
+const html = await client.renderHtml("550e8400-e29b-41d4-a716-446655440000", {
+  merge_tags: {
+    text: { name: "Noruwa", company: "Maildeno" },
+    url:  { reset_url: "https://app.example.com/reset/abc123" },
+  },
+  context: {
+    plan: "pro",
+  },
+})
+
+console.log(html) // <!DOCTYPE html>...
+----
+
+== TypeScript types
+
+All types are exported from the package root:
+
+[source,typescript]
+----
+import type {
+  RenderTarget,    // "html" | "react-email" | "mjml"
+  RenderOptions,   // input to client.render()
+  RenderResult,    // output from client.render()
+  DynamicData,     // { merge_tags?, context? }
+  MergeTagGroup,   // { text?, url?, attr? }
+  MaildenoConfig,  // constructor config
+  SdkErrorCode,    // union of error code strings
+  ValidationIssue, // issue on err.issues
+} from "maildeno"
+----

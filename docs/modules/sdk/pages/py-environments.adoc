@@ -1,0 +1,165 @@
+= Frameworks & Environments
+:description: Use the Maildeno Python SDK with FastAPI, Flask, Django, and more.
+
+== Sync vs async — which to pick
+
+[cols="2,1",options=header]
+|===
+|Use case|Client
+
+|Flask, Django (WSGI), scripts, Celery tasks
+|`MaildenoClient`
+
+|FastAPI, Starlette, aiohttp, async workers
+|`AsyncMaildenoClient`
+|===
+
+Both expose the same methods. The only difference is the call style (`await` vs not).
+
+== FastAPI
+
+[source,python]
+----
+# main.py
+import os
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from maildeno import AsyncMaildenoClient, MaildenoError
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.maildeno = AsyncMaildenoClient(
+        api_key=os.environ["MAILDENO_API_KEY"]
+    )
+    yield
+    await app.state.maildeno.aclose()
+
+app = FastAPI(lifespan=lifespan)
+
+class RenderRequest(BaseModel):
+    template_id: str
+    name: str
+    plan: str
+
+@app.post("/api/render-email")
+async def render_email(req: RenderRequest, request: Request):
+    try:
+        html = await request.app.state.maildeno.render_html(
+            req.template_id,
+            {
+                "merge_tags": {"text": {"name": req.name}},
+                "context":    {"plan": req.plan},
+            },
+        )
+        return {"html": html}
+    except MaildenoError as err:
+        raise HTTPException(
+            status_code=err.status or 500,
+            detail={"error": err.code, "message": err.message},
+        )
+----
+
+TIP: Use the `lifespan` context manager to own the client lifecycle — create on startup, close on shutdown. This keeps the httpx connection pool warm across requests.
+
+== Flask
+
+[source,python]
+----
+# app.py
+import os
+from flask import Flask, jsonify, request
+from maildeno import MaildenoClient, MaildenoError
+
+app = Flask(__name__)
+maildeno = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"])
+
+@app.post("/api/render-email")
+def render_email():
+    data = request.get_json()
+    try:
+        html = maildeno.render_html(
+            data["template_id"],
+            {
+                "merge_tags": {"text": {"name": data["name"]}},
+                "context":    {"plan": data["plan"]},
+            },
+        )
+        return jsonify(html=html)
+    except MaildenoError as err:
+        return jsonify(error=err.code, message=err.message), err.status or 500
+----
+
+== Django
+
+[source,python]
+----
+# views.py
+import json
+import os
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from maildeno import MaildenoClient, MaildenoError
+
+maildeno = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"])
+
+@require_POST
+def render_email(request):
+    data = json.loads(request.body)
+    try:
+        html = maildeno.render_html(
+            data["template_id"],
+            {"merge_tags": {"text": {"name": data["name"]}}},
+        )
+        return JsonResponse({"html": html})
+    except MaildenoError as err:
+        return JsonResponse(
+            {"error": err.code, "message": err.message},
+            status=err.status or 500,
+        )
+----
+
+== Celery task
+
+[source,python]
+----
+# tasks.py
+import os
+from celery import Celery
+from maildeno import MaildenoClient, MaildenoError
+
+app = Celery("tasks")
+maildeno = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"])
+
+@app.task(bind=True, max_retries=3)
+def send_welcome_email(self, user_id: int, name: str, email: str):
+    try:
+        html = maildeno.render_html(
+            "welcome-template-id",
+            {"merge_tags": {"text": {"name": name}}},
+        )
+        # send html via your email provider ...
+    except MaildenoError as err:
+        if err.code in ("NETWORK_ERROR", "TIMEOUT"):
+            raise self.retry(exc=err, countdown=2 ** self.request.retries)
+        raise
+----
+
+== Scripts and one-off jobs
+
+[source,python]
+----
+# backfill_emails.py
+import os
+from maildeno import MaildenoClient
+
+with MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"]) as client:
+    for user in get_all_users():
+        html = client.render_html(
+            "onboarding-template",
+            {"merge_tags": {"text": {"name": user.name}}},
+        )
+        send_email(user.email, html)
+----
+
+The context manager ensures the underlying httpx transport is closed when the script exits, even on error.

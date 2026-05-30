@@ -1,0 +1,9 @@
+// modules/builder/nav.adoc
+* Email Builder
+** xref:builder:overview.adoc[Overview]
+** xref:builder:editor.adoc[Drag & Drop Editor]
+** xref:builder:templates.adoc[Templates]
+** xref:builder:merge-tags.adoc[Merge Tags]
+** xref:builder:visibility-rules.adoc[Visibility Rules]
+** xref:builder:exporting.adoc[Exporting]
+** xref:builder:api-keys.adoc[API Keys]

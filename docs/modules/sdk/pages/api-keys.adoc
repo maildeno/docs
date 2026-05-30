@@ -1,0 +1,103 @@
+= API Key Scopes
+:description: Create and manage scoped API keys for the Maildeno Render API.
+
+API keys authenticate every request and can be scoped to restrict which render targets they may produce.
+
+== Target scopes
+
+[cols="1,2",options=header]
+|===
+|Targets value|Allowed render calls
+
+|`["all"]`
+|`html`, `react-email`, `mjml`
+
+|`["html"]`
+|`html` only — any other target returns `403 FORBIDDEN`
+
+|`["mjml"]`
+|`mjml` only
+
+|`["react-email"]`
+|`react-email` only
+
+|`["html", "mjml"]`
+|`html` and `mjml` — `react-email` returns `403 FORBIDDEN`
+|===
+
+== Creating a key via the dashboard
+
+See xref:builder:api-keys.adoc[API Keys (Builder)] for the UI walkthrough.
+
+== Creating a key via the API
+
+[source,bash]
+----
+curl -X POST https://api.maildeno.com/api/v1/keys \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ADMIN_KEY>" \
+  -d '{"name": "HTML only", "targets": ["html"]}'
+----
+
+[source,json]
+----
+{
+  "id":         "key_01abc...",
+  "name":       "HTML only",
+  "key":        "sk_live_...",   // shown once — copy it now
+  "targets":    ["html"],
+  "created_at": "2025-01-01T00:00:00Z"
+}
+----
+
+== Handling a 403 in the SDK
+
+When a request hits a target outside the key's scope, the SDK raises `FORBIDDEN`:
+
+[tabs]
+====
+JavaScript::
++
+[source,typescript]
+----
+try {
+  // This key only has targets: ["html"]
+  await client.renderMjml("template-id")
+} catch (err) {
+  if (err instanceof MaildenoError && err.code === "FORBIDDEN") {
+    console.error("Key scope insufficient:", err.message)
+    // "Key scope insufficient: key targets ['html'], requested 'mjml'"
+  }
+}
+----
+
+Python::
++
+[source,python]
+----
+try:
+    client.render_mjml("template-id")
+except MaildenoError as err:
+    if err.code == "FORBIDDEN":
+        print("Key scope insufficient:", err.message)
+----
+====
+
+== Recommended key naming convention
+
+[source]
+----
+{environment}-{service}-{target}
+
+production-api-server-html
+staging-newsletter-worker-all
+ci-integration-tests-html
+----
+
+== Security best practices
+
+* Store keys in environment variables or a secrets manager (Vault, AWS Secrets Manager, Doppler).
+* Never commit keys to source control.
+* Use the narrowest scope sufficient for the task — principle of least privilege.
+* Rotate keys on a regular schedule or immediately if a leak is suspected.
+* Use separate keys per environment (development, staging, production).

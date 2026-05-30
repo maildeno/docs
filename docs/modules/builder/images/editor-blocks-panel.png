@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600">
+  <rect width="1200" height="600" fill="#f0f4ff" rx="12"/>
+  <rect x="40" y="40" width="1120" height="520" fill="#e8eeff" rx="8" stroke="#b0c4ff" stroke-width="2" stroke-dasharray="8,4"/>
+  <text x="600" y="270" font-family="system-ui,sans-serif" font-size="28" fill="#4466cc" text-anchor="middle" font-weight="600">Editor Blocks Panel</text>
+  <text x="600" y="315" font-family="system-ui,sans-serif" font-size="18" fill="#8899cc" text-anchor="middle">Screenshot placeholder — replace with actual image</text>
+  <rect x="530" y="360" width="140" height="36" rx="6" fill="#4466cc"/>
+  <text x="600" y="383" font-family="system-ui,sans-serif" font-size="14" fill="white" text-anchor="middle">📷 Add image</text>
+</svg>

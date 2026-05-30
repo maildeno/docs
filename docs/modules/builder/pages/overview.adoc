@@ -1,0 +1,43 @@
+= Email Builder Overview
+:description: Learn how the Maildeno email builder works — templates, editor, and the full design workflow.
+
+The Maildeno email builder is a visual, code-free environment for creating responsive email templates. Product and marketing teams use it to design emails; developers integrate the output via the Render API.
+
+image::editor-overview.png[Maildeno email builder main interface,role=center,width=100%]
+
+== Builder sections
+
+The builder dashboard is split into three main areas:
+
+[cols="1,3",options=header]
+|===
+|Area|Description
+
+|**Template Library**
+|Browse, duplicate, and organise all your templates. Filter by tag or creation date.
+
+|**Editor**
+|Drag-and-drop canvas where you assemble and style your email layout.
+
+|**Settings Panel**
+|Per-block and per-row configuration — fonts, spacing, colours, visibility rules, and merge tag insertion.
+|===
+
+== How templates relate to the API
+
+When you finish designing a template:
+
+. Copy the **Template ID** from Template Settings.
+. Use that ID in any SDK call (`renderHtml(templateId, ...)`) or direct REST request.
+. Supply merge tag values and context at render time — the builder is never involved at runtime.
+
+This clean separation lets designers iterate on templates without touching application code, and lets developers render them in any backend service.
+
+== Learn more
+
+* xref:editor.adoc[Drag & Drop Editor] — blocks, rows, columns, and styling
+* xref:templates.adoc[Templates] — versioning, duplication, publishing
+* xref:merge-tags.adoc[Merge Tags] — dynamic content injection
+* xref:visibility-rules.adoc[Visibility Rules] — conditional content by context
+* xref:exporting.adoc[Exporting] — HTML, React Email, MJML
+* xref:api-keys.adoc[API Keys] — creating and scoping keys

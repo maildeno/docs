@@ -1,0 +1,179 @@
+= REST API Reference
+:description: Direct HTTP API reference for the Maildeno render endpoint.
+
+If you prefer not to use an SDK, you can call the Maildeno Render API directly over HTTP.
+
+== Base URL
+
+----
+https://api.maildeno.com
+----
+
+== Authentication
+
+All requests require a Bearer token in the `Authorization` header:
+
+[source]
+----
+Authorization: Bearer sk_live_your_api_key
+----
+
+== Endpoints
+
+=== `POST /v1/sdk/render`
+
+Render a template and return the output string.
+
+==== Request
+
+[source]
+----
+POST /v1/sdk/render
+Content-Type: application/json
+Authorization: Bearer <API_KEY>
+----
+
+[source,json]
+----
+{
+  "template_id": "550e8400-e29b-41d4-a716-446655440000",
+  "target": "html",
+  "dynamic_data": {
+    "merge_tags": {
+      "text": {
+        "name": "Noruwa",
+        "company": "Maildeno"
+      },
+      "url": {
+        "reset_url": "https://app.example.com/reset/abc123"
+      },
+      "attr": {
+        "alt_text": "Banner image"
+      }
+    },
+    "context": {
+      "plan": "pro",
+      "country": "usa"
+    }
+  }
+}
+----
+
+==== Request fields
+
+[cols="1,1,1,3",options=header]
+|===
+|Field|Type|Required|Description
+
+|`template_id` |`string` (UUID v4) |✓ |The template to render.
+|`target` |`string` | |`"html"` (default), `"react-email"`, or `"mjml"`.
+|`dynamic_data` |`object` | |See below.
+|`dynamic_data.merge_tags` |`object` | |`{ text?, url?, attr? }` — all optional sub-objects.
+|`dynamic_data.context` |`object` | |Flat map of `string \| number \| boolean` values.
+|===
+
+==== Response — 200 OK
+
+The response body is the raw rendered string (not JSON-wrapped):
+
+[source,html]
+----
+<!DOCTYPE html>
+<html lang="en">
+...
+</html>
+----
+
+`Content-Type` is `text/html` for `html` target, `text/plain` for `react-email` and `mjml`.
+
+==== Error responses
+
+[cols="1,1,3",options=header]
+|===
+|Status|Code|Description
+
+|`401`
+|`INVALID_API_KEY`
+|Missing, malformed, revoked, or expired key.
+
+|`403`
+|`FORBIDDEN`
+|Key does not have scope for the requested target.
+
+|`404`
+|`TEMPLATE_NOT_FOUND`
+|Template ID does not exist.
+
+|`422`
+|`RENDER_ERROR`
+|Request body is invalid or render pipeline failed. Includes `issues` array.
+|===
+
+[source,json]
+----
+{
+  "code": "RENDER_ERROR",
+  "message": "template_id is not a valid UUID",
+  "issues": [
+    {
+      "loc": ["body", "template_id"],
+      "msg": "Input should be a valid UUID, invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `n` at 1",
+      "type": "uuid_parsing"
+    }
+  ]
+}
+----
+
+== `curl` examples
+
+[source,bash]
+----
+# Minimal — HTML, no dynamic data
+curl -X POST https://api.maildeno.com/v1/sdk/render \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $MAILDENO_API_KEY" \
+  -d '{"template_id": "550e8400-e29b-41d4-a716-446655440000"}'
+----
+
+[source,bash]
+----
+# Full request with merge tags and context
+curl -X POST https://api.maildeno.com/v1/sdk/render \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $MAILDENO_API_KEY" \
+  -d '{
+    "template_id": "550e8400-e29b-41d4-a716-446655440000",
+    "target": "html",
+    "dynamic_data": {
+      "merge_tags": {
+        "text": { "name": "Noruwa", "company": "Maildeno" }
+      },
+      "context": { "plan": "pro" }
+    }
+  }'
+----
+
+== Key management endpoints
+
+=== `POST /api/v1/keys`
+
+Create a new API key.
+
+[source,bash]
+----
+curl -X POST https://api.maildeno.com/api/v1/keys \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ADMIN_KEY>" \
+  -d '{"name": "Production HTML", "targets": ["html"]}'
+----
+
+[source,json]
+----
+{
+  "id": "key_01abc...",
+  "name": "Production HTML",
+  "key": "sk_live_...",   // shown once — copy it now
+  "targets": ["html"],
+  "created_at": "2025-01-01T00:00:00Z"
+}
+----

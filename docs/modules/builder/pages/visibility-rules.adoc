@@ -1,0 +1,160 @@
+= Visibility Rules
+:description: Show or hide email sections dynamically using context values and visibility rules.
+
+Visibility rules let you conditionally show or hide rows in your email based on **context** values supplied at render time. This allows a single template to serve multiple audiences — for example, showing a "Pro features" row only when `plan = pro`.
+
+== How it works
+
+. In the builder, select a **row** and open its settings.
+. Add a **Visibility Rule** using the condition editor.
+. At render time, pass a `context` object containing key–value pairs.
+. The Render API evaluates each rule and includes or excludes rows accordingly.
+
+Context values are *not* injected into email content — they only drive show/hide logic. For dynamic text content, use xref:merge-tags.adoc[merge tags].
+
+== Creating a rule in the editor
+
+. Click a row to select it.
+. In the **Settings** panel, expand **Visibility**.
+. Click **+ Add Rule**.
+. Choose:
+** **Field** — the context key to evaluate (e.g. `plan`)
+** **Operator** — see <<operators>> below
+** **Value** — the comparison value (e.g. `pro`)
+
+image::visibility-rule-editor.png[Visibility rule editor showing a plan equals pro condition,role=center,width=80%]
+
+Multiple rules on a single row use **AND** logic — all conditions must be satisfied for the row to appear.
+
+[#operators]
+== Supported operators
+
+[cols="1,3,2",options=header]
+|===
+|Operator|Behaviour|Example
+
+|`equals`
+|Strict equality (case-sensitive)
+|`plan equals pro`
+
+|`not_equals`
+|Strict inequality
+|`country not_equals us`
+
+|`in`
+|Value is one of a comma-separated list
+|`plan in pro,enterprise`
+
+|`not_in`
+|Value is not in the list
+|`country not_in us,ca`
+
+|`gt`
+|Numeric greater-than
+|`age gt 17`
+
+|`gte`
+|Numeric greater-than-or-equal
+|`account_days gte 30`
+
+|`lt`
+|Numeric less-than
+|`days_remaining lt 7`
+
+|`lte`
+|Numeric less-than-or-equal
+|`usage_pct lte 100`
+
+|`exists`
+|Key is present in context (any value)
+|`promo_code exists`
+
+|`not_exists`
+|Key is absent from context
+|`promo_code not_exists`
+|===
+
+== Passing context at render time
+
+[tabs]
+====
+JavaScript::
++
+[source,typescript]
+----
+await client.renderHtml("template-id", {
+  context: {
+    plan:         "pro",
+    country:      "usa",
+    age:          25,
+    country_rank: "2",
+    expiry:       "2028",
+  },
+})
+----
+
+Python::
++
+[source,python]
+----
+client.render_html("template-id", {
+    "context": {
+        "plan":         "pro",
+        "country":      "usa",
+        "age":          25,
+        "country_rank": "2",
+        "expiry":       "2028",
+    },
+})
+----
+
+REST API::
++
+[source,json]
+----
+{
+  "template_id": "550e8400-e29b-41d4-a716-446655440000",
+  "target": "html",
+  "dynamic_data": {
+    "context": {
+      "plan": "pro",
+      "country": "usa",
+      "age": 25
+    }
+  }
+}
+----
+====
+
+== Default behaviour (no context supplied)
+
+If you call `renderHtml("template-id")` without a `context`:
+
+* All rows *without* a visibility rule are shown.
+* Rows *with* a visibility rule are **hidden by default** unless the rule evaluates to true. Since no context is provided, the rule cannot be satisfied, so the row is hidden.
+
+TIP: Design your templates so the "no context" render is safe to show — for example, keep promotional upsell rows behind rules so they're only shown when relevant context is present.
+
+== Combining visibility rules and merge tags
+
+You can use both in the same template:
+
+[source,typescript]
+----
+await client.render({
+  templateId: "template-id",
+  target: "html",
+  dynamicData: {
+    merge_tags: {
+      text: { name: "Noruwa", promo_label: "Save 30%" },
+      url:  { promo_url: "https://app.example.com/upgrade" },
+    },
+    context: {
+      plan:    "free",
+      country: "usa",
+    },
+  },
+})
+----
+
+Here the `name` merge tag fills in visible content, while `plan` and `country` drive which rows are shown.

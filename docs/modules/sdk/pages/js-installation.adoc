@@ -1,0 +1,112 @@
+= Installation & Setup
+:description: Install and configure the Maildeno JavaScript/TypeScript SDK.
+
+== Install
+
+[source,bash]
+----
+npm install maildeno
+# or
+yarn add maildeno
+# or
+pnpm add maildeno
+# or
+bun add maildeno
+----
+
+== Configure the client
+
+[source,typescript]
+----
+import { MaildenoClient } from "maildeno"
+
+const client = new MaildenoClient({
+  // Required — obtain from Dashboard → API Keys → Create Key
+  apiKey: process.env.MAILDENO_API_KEY!,
+
+  // Optional — request timeout in ms, defaults to 30000
+  timeout: 10_000,
+})
+----
+
+=== Configuration options
+
+[cols="1,1,1,3",options=header]
+|===
+|Option|Type|Default|Description
+
+|`apiKey`
+|`string`
+|—
+|**Required.** Your Maildeno API key.
+
+|`timeout`
+|`number`
+|`30000`
+|Request timeout in milliseconds. Throws `TIMEOUT` if exceeded.
+|===
+
+== Client lifecycle
+
+The `MaildenoClient` is stateless — it holds only configuration. There is no connection pool to manage. Instantiate it once at module level and reuse across requests:
+
+[source,typescript]
+----
+// ✅ Module-level singleton — recommended
+const maildeno = new MaildenoClient({ apiKey: process.env.MAILDENO_API_KEY! })
+
+export async function sendWelcomeEmail(name: string, to: string) {
+  const html = await maildeno.renderHtml("template-id", {
+    merge_tags: { text: { name } },
+  })
+  // ... send html via your email provider
+}
+----
+
+== Node.js version requirements
+
+[cols="1,2",options=header]
+|===
+|Node version|Notes
+
+|18+
+|Native `fetch` available — no polyfill needed.
+
+|< 18
+|Install `node-fetch` and polyfill `globalThis.fetch` before importing the SDK.
+|===
+
+=== Node.js < 18 polyfill
+
+[source,bash]
+----
+npm install node-fetch
+----
+
+[source,typescript]
+----
+import fetch from "node-fetch"
+;(globalThis as any).fetch = fetch
+
+// Now import the SDK
+import { MaildenoClient } from "maildeno"
+----
+
+== Other runtimes
+
+[cols="1,3",options=header]
+|===
+|Runtime|Notes
+
+|Bun
+|Native `fetch` — works out of the box.
+
+|Deno
+|Native `fetch` — import from npm specifier: `import { MaildenoClient } from "npm:maildeno"`
+
+|Cloudflare Workers
+|Native `fetch` — works out of the box. Keep the API key in a secret binding, not in source.
+
+|Browser
+|Native `fetch` — but *never* expose your API key client-side. See xref:js-environments.adoc[Frontend usage].
+|===

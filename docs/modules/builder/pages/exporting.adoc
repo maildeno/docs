@@ -1,0 +1,140 @@
+= Exporting
+:description: Render and export email templates as HTML, React Email, or MJML.
+
+Maildeno can render any template into three output formats. You choose the target at render time — no changes to the template are needed.
+
+== Render targets
+
+[cols="1,2,3",options=header]
+|===
+|Target string|Format|Best for
+
+|`html`
+|Plain HTML document
+|Any transactional email provider — SendGrid, Postmark, Amazon SES, Resend, Mailgun, SparkPost, etc.
+
+|`react-email`
+|React/JSX component (`.tsx`)
+|Next.js or Node.js apps using the https://react.email[React Email] framework.
+
+|`mjml`
+|https://mjml.io[MJML] source
+|Teams maintaining an MJML toolchain or requiring advanced cross-client compatibility guarantees.
+|===
+
+== Choosing a target
+
+[tabs]
+====
+JavaScript::
++
+[source,typescript]
+----
+// HTML (default)
+const html = await client.renderHtml("template-id")
+
+// React Email
+const tsx = await client.renderReact("template-id")
+
+// MJML
+const mjml = await client.renderMjml("template-id")
+
+// Or use render() for full control
+const result = await client.render({
+  templateId: "template-id",
+  target: "react-email",   // <1>
+  dynamicData: { ... },
+})
+console.log(result.output)
+console.log(result.target)      // "react-email"
+console.log(result.templateId)  // "550e8400-..."
+----
+<1> `"html" | "react-email" | "mjml"`
+
+Python::
++
+[source,python]
+----
+# HTML (default)
+html = client.render_html("template-id")
+
+# React Email
+tsx = client.render_react("template-id")
+
+# MJML
+mjml = client.render_mjml("template-id")
+
+# Or render() for full control
+result = client.render(
+    template_id="template-id",
+    target="react-email",   # <1>
+    dynamic_data={ ... },
+)
+print(result.output)
+print(result.target)       # "react-email"
+print(result.template_id)  # "550e8400-..."
+----
+<1> `"html"`, `"react-email"`, or `"mjml"`
+====
+
+== API key scopes and targets
+
+Each API key can be restricted to specific targets. Requesting a target outside the key's scope returns a `403 FORBIDDEN` error.
+
+[source,bash]
+----
+# Create a key scoped to HTML only
+POST https://api.maildeno.com/api/v1/keys
+{ "name": "Production HTML key", "targets": ["html"] }
+----
+
+See xref:api-keys.adoc[API Keys] for full details.
+
+== Piping output to an email provider
+
+=== SendGrid (HTML)
+
+[source,typescript]
+----
+import sgMail from "@sendgrid/mail"
+import { MaildenoClient } from "maildeno"
+
+const maildeno = new MaildenoClient({ apiKey: process.env.MAILDENO_API_KEY! })
+sgMail.setApiKey(process.env.SENDGRID_API_KEY!)
+
+const html = await maildeno.renderHtml("template-id", {
+  merge_tags: { text: { name: "Noruwa" } },
+})
+
+await sgMail.send({
+  to: "noruwa@example.com",
+  from: "hello@maildeno.com",
+  subject: "Welcome to Maildeno",
+  html,
+})
+----
+
+=== Amazon SES (HTML)
+
+[source,python]
+----
+import boto3
+import os
+from maildeno import MaildenoClient
+
+maildeno = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"])
+ses = boto3.client("ses", region_name="us-east-1")
+
+html = maildeno.render_html("template-id", {
+    "merge_tags": {"text": {"name": "Noruwa"}},
+})
+
+ses.send_email(
+    Source="hello@maildeno.com",
+    Destination={"ToAddresses": ["noruwa@example.com"]},
+    Message={
+        "Subject": {"Data": "Welcome to Maildeno"},
+        "Body": {"Html": {"Data": html}},
+    },
+)
+----

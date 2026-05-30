@@ -1,0 +1,46 @@
+# antora-playbook.yml — Production build
+# Pulls content directly from GitHub. Used by CI/CD.
+
+site:
+  title: Maildeno Docs
+  url: https://docs.maildeno.com
+  start_page: ROOT::index.adoc
+  robots: allow
+  keys:
+    google_analytics: ''       # GA4 measurement ID — add in CI env or here
+
+content:
+  sources:
+    - url: https://github.com/YOUR_ORG/maildeno-docs.git
+      branches: [main]
+      start_path: docs
+
+ui:
+  bundle:
+    url: ./ui/ui-bundle.zip
+  supplemental_files: ./ui/supplemental-ui
+
+antora:
+  extensions: []
+
+asciidoc:
+  attributes:
+    # Global attributes available in every page
+    product-name: Maildeno
+    product-name-short: Maildeno
+    page-component-title: Documentation
+    hide-uri-scheme: ''
+    experimental: ''
+    source-highlighter: highlight.js
+    # SDK versions — bump here on release
+    js-sdk-version: '1.0.0'
+    py-sdk-version: '1.0.0'
+    api-base-url: 'https://api.maildeno.com'
+    dashboard-url: 'https://app.maildeno.com'
+    support-email: 'support@maildeno.com'
+  extensions:
+    - '@asciidoctor/tabs'
+
+output:
+  dir: ./build/site
+  clean: true

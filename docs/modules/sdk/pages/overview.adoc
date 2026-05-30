@@ -1,0 +1,81 @@
+= SDK Overview
+:description: Overview of the official Maildeno SDKs for JavaScript/TypeScript and Python.
+
+Maildeno ships official SDKs for JavaScript/TypeScript and Python. Both wrap the same Render REST API and expose an identical conceptual surface — only the language idioms differ.
+
+== Available SDKs
+
+[cols="1,1,1,1",options=header]
+|===
+|Language|Package|Version|Minimum runtime
+
+|JavaScript / TypeScript
+|https://www.npmjs.com/package/maildeno[`maildeno` on npm]
+|{js-sdk-version}
+|Node.js 18+ (or any runtime with native `fetch`)
+
+|Python
+|https://pypi.org/project/maildeno/[`maildeno` on PyPI]
+|{py-sdk-version}
+|Python 3.9+
+|===
+
+== Quick comparison
+
+[cols="2,3,3",options=header]
+|===
+|Feature|JavaScript SDK|Python SDK
+
+|Async support
+|Native (`async/await`, Promise-based)
+|`AsyncMaildenoClient` (asyncio / httpx)
+
+|Sync support
+|N/A (JS is async by nature)
+|`MaildenoClient` (blocking httpx)
+
+|Transport
+|Native `fetch`
+|`httpx` (bring-your-own client supported)
+
+|Type safety
+|Full TypeScript types exported
+|Full PEP 561 type stubs (mypy / pyright)
+
+|Error type
+|`MaildenoError`
+|`MaildenoError`
+
+|Validation errors
+|`err.issues: ValidationIssue[]`
+|`err.issues: list[ValidationIssue]`
+|===
+
+== Render methods
+
+Both SDKs expose the same methods:
+
+[cols="2,3",options=header]
+|===
+|Method|Returns
+
+|`render(options)`
+|Full result object (`output`, `target`, `templateId`)
+
+|`renderHtml(id, data?)` / `render_html(id, data)`
+|Rendered HTML string
+
+|`renderReact(id, data?)` / `render_react(id, data)`
+|Rendered React/TSX string
+
+|`renderMjml(id, data?)` / `render_mjml(id, data)`
+|Rendered MJML string
+|===
+
+== Where to go next
+
+* xref:javascript.adoc[JavaScript / TypeScript SDK] — full reference
+* xref:python.adoc[Python SDK] — full reference
+* xref:rest-api.adoc[REST API] — raw HTTP reference (no SDK)
+* xref:error-codes.adoc[Error Codes] — complete error code reference
+* xref:api-keys.adoc[API Key Scopes] — key creation and permissions

@@ -1,0 +1,133 @@
+= Dynamic Data
+:description: Supply merge tags and context to the Maildeno Python SDK at render time.
+
+Dynamic data is a plain `dict` passed as the second positional argument (or `dynamic_data=` keyword) to any render method.
+
+== Structure
+
+[source,python]
+----
+# TypedDict equivalent
+DynamicData = {
+    "merge_tags": {          # optional
+        "text": dict[str, str],   # paragraph, heading, button text
+        "url":  dict[str, str],   # href, src, image URLs
+        "attr": dict[str, str],   # alt, aria-label, etc.
+    },
+    "context": dict[str, str | int | float | bool],  # optional
+}
+----
+
+All fields are optional.
+
+== Merge tags
+
+=== `text` — inline content
+
+[source,python]
+----
+client.render_html("template-id", {
+    "merge_tags": {
+        "text": {
+            "name":       "Noruwa",
+            "company":    "Maildeno",
+            "reset_name": "Password",
+        },
+    },
+})
+----
+
+Values are **HTML-escaped** before insertion.
+
+=== `url` — links and image sources
+
+[source,python]
+----
+client.render_html("template-id", {
+    "merge_tags": {
+        "url": {
+            "reset_url":    "https://app.example.com/reset/abc123",
+            "banner_image": "https://cdn.example.com/banner.jpg",
+        },
+    },
+})
+----
+
+Values are **URL percent-encoded** before insertion.
+
+=== `attr` — HTML attributes
+
+[source,python]
+----
+client.render_html("template-id", {
+    "merge_tags": {
+        "attr": {"alt_text": "Product banner"},
+    },
+})
+----
+
+Values are **HTML attribute-safe** encoded.
+
+== Context
+
+[source,python]
+----
+client.render_html("template-id", {
+    "context": {
+        "plan":    "pro",
+        "country": "usa",
+        "age":     25,
+    },
+})
+----
+
+Context values drive xref:builder:visibility-rules.adoc[visibility rules] and are never rendered into content.
+
+== Full example
+
+[source,python]
+----
+client.render(
+    template_id="550e8400-e29b-41d4-a716-446655440000",
+    target="mjml",
+    dynamic_data={
+        "merge_tags": {
+            "text": {
+                "name":       "Noruwa",
+                "company":    "Maildeno",
+                "reset_name": "Password",
+            },
+            "url": {
+                "reset_url": "https://app.example.com/reset/abc123",
+            },
+            "attr": {
+                "alt_text": "Cave image",
+            },
+        },
+        "context": {
+            "country":      "usa",
+            "country_rank": "2",
+            "expiry":       "2028",
+        },
+    },
+)
+----
+
+== TypedDict usage (type-safe)
+
+Because `DynamicData` is a `TypedDict`, you can pass typed dicts for IDE autocompletion and static analysis:
+
+[source,python]
+----
+from maildeno import DynamicData, MergeTagGroup
+
+data: DynamicData = {
+    "merge_tags": MergeTagGroup(
+        text={"name": "Noruwa"},
+        url={"reset_url": "https://app.example.com/reset/abc123"},
+    ),
+    "context": {"plan": "pro"},
+}
+
+html = client.render_html("template-id", data)
+----

@@ -1,0 +1,102 @@
+= Core Concepts
+:description: Understand the fundamental building blocks of Maildeno.
+
+Before diving into the builder or SDK, it helps to understand how the pieces fit together.
+
+== Templates
+
+A **template** is the design unit in Maildeno. It lives in the dashboard and is identified by a UUID (e.g. `550e8400-e29b-41d4-a716-446655440000`). A template defines:
+
+* The visual layout — rows, columns, blocks
+* Static content — fonts, colours, logos
+* Dynamic placeholders — merge tags and visibility rules
+
+Templates are version-controlled inside Maildeno. Drafts and published states are separate so your production emails are never affected by in-progress edits.
+
+== Render targets
+
+The same template can be rendered into three output formats:
+
+[cols="1,3",options=header]
+|===
+|Target|Description
+
+|`html`
+|Plain HTML — the most widely compatible format. Pass directly to any email API (SendGrid, Postmark, Amazon SES, Resend, etc.).
+
+|`react-email`
+|A React/JSX component compatible with the https://react.email[React Email] ecosystem. Use this in Next.js or any Node.js email pipeline that renders React.
+
+|`mjml`
+|https://mjml.io[MJML] source — ideal for teams with an existing MJML toolchain or advanced cross-client requirements.
+|===
+
+== Merge tags
+
+Merge tags are `{{ placeholder }}` tokens embedded in your template content. They are replaced with real values at render time. Three types are supported, each with appropriate escaping:
+
+[cols="1,2,2",options=header]
+|===
+|Type|Placed in|Escaping
+
+|`text`
+|Paragraph, heading, list, button content
+|HTML-escaped (safe against XSS)
+
+|`url`
+|`href`, `src`, image URLs
+|URL percent-encoded
+
+|`attr`
+|HTML attributes — `alt`, `aria-label`, etc.
+|HTML attribute-safe
+|===
+
+See xref:builder:merge-tags.adoc[Merge Tags] for a full reference.
+
+== Context and visibility rules
+
+**Context** is a flat key–value map (strings, numbers, booleans) passed at render time. It is evaluated against **visibility rules** you define in the builder — rules like "show this row only when `plan` equals `pro`" or "hide this section when `country` is `us`."
+
+Context values are *never* injected into rendered content. They only control what is shown or hidden.
+
+See xref:builder:visibility-rules.adoc[Visibility Rules] for a full reference.
+
+== API keys and scopes
+
+API keys authenticate your SDK or direct HTTP calls. Each key can be scoped to one or more render targets, enabling least-privilege access:
+
+[source]
+----
+targets: ["html"]          # this key can only render HTML
+targets: ["html", "mjml"]  # HTML and MJML are allowed; React Email → 403
+targets: ["all"]           # unrestricted
+----
+
+See xref:sdk:api-keys.adoc[API Key Scopes] for creation and management details.
+
+== Request / response flow
+
+[source]
+----
+Your app                    Maildeno Render API
+─────────                   ───────────────────
+  │                                  │
+  │  POST /v1/sdk/render             │
+  │  {                               │
+  │    template_id: "...",           │
+  │    target: "html",               │
+  │    dynamic_data: {               │
+  │      merge_tags: { ... },        │
+  │      context: { ... }            │
+  │    }                             │
+  │  }                    ──────────►│
+  │                                  │  1. Validate API key + scope
+  │                                  │  2. Fetch template
+  │                                  │  3. Evaluate visibility rules
+  │                                  │  4. Replace merge tags
+  │                                  │  5. Render to target format
+  │  200 OK                          │
+  │  <!DOCTYPE html>...  ◄──────────-│
+  │                                  │
+----

@@ -1,0 +1,98 @@
+= Drag & Drop Editor
+:description: Reference guide to the Maildeno drag-and-drop email editor.
+
+The editor is the core of the Maildeno builder. You assemble emails from rows and blocks, customise styles in the settings panel, and preview across desktop and mobile viewports.
+
+image::editor-canvas.png[Maildeno editor canvas with blocks and settings panel,role=center,width=100%]
+
+== Canvas
+
+The canvas is the central editing area. Emails are structured as a vertical stack of **rows**. Each row contains one or more **columns**, and each column holds one or more **blocks**.
+
+[source]
+----
+Email
+└─ Row
+   ├─ Column
+   │  └─ Block (e.g. Image)
+   └─ Column
+      └─ Block (e.g. Text)
+----
+
+=== Adding rows
+
+Click **+ Add Row** at the bottom of the canvas, or drag a row layout from the **Layouts** panel on the left.
+
+Available row layouts:
+
+* Full-width (1 column)
+* Two-column (50/50, 60/40, 40/60)
+* Three-column
+* Four-column
+* Sidebar left / sidebar right
+
+=== Adding blocks
+
+Drag a block from the **Blocks** panel and drop it into any column. You can reorder blocks within a column or move them to another column.
+
+.Available blocks
+[cols="1,3"]
+|===
+|Block|Description
+
+|**Heading**
+|H1–H4 with full font, size, and colour control.
+
+|**Text**
+|Rich paragraph text with inline formatting.
+
+|**Image**
+|Upload or link an image. Supports `src` and `alt` merge tags.
+
+|**Button**
+|CTA button with customisable label, URL, colours, and border radius.
+
+|**Divider**
+|Horizontal rule with colour and padding control.
+
+|**Spacer**
+|Empty vertical space block.
+
+|**HTML**
+|Raw HTML block for advanced customisation.
+|===
+
+image::editor-blocks-panel.png[Blocks panel showing all available block types,role=center,width=70%]
+
+== Settings panel
+
+Click any block or row to open its settings in the right panel.
+
+=== Block settings (example: Text block)
+
+* **Content** — Rich text editor with merge tag insertion button
+* **Font** — Family, size, weight, colour, line-height
+* **Spacing** — Padding (top, right, bottom, left)
+* **Alignment** — Left, centre, right
+
+=== Row settings
+
+* **Background colour** — Per-row colour or image
+* **Padding** — Outer and inner spacing
+* **Visibility Rule** — Attach a xref:visibility-rules.adoc[visibility rule] to show/hide this row based on context
+
+== Preview
+
+Use the **Preview** toggle in the top bar to switch between:
+
+* **Desktop** — 600px width (industry standard for email clients)
+* **Mobile** — 375px width
+
+image::editor-preview-mobile.png[Mobile preview in the editor,role=center,width=70%]
+
+== Saving and publishing
+
+* **Save** — Saves a draft. The published version is unchanged.
+* **Publish** — Promotes the current draft to the published version. The Render API always uses the published version.
+
+WARNING: Publishing immediately affects all render calls using this template ID. Test thoroughly in staging before publishing.

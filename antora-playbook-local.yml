@@ -1,0 +1,38 @@
+# antora-playbook-local.yml — Local development build
+# Reads content directly from the local filesystem.
+# Usage: npm run build:local
+
+site:
+  title: Maildeno Docs (Local)
+  url: http://localhost:5000
+  start_page: ROOT::index.adoc
+
+content:
+  sources:
+    - url: .
+      branches: HEAD
+      start_path: docs
+
+ui:
+  bundle:
+    url: ./ui/ui-bundle.zip
+  supplemental_files: ./ui/supplemental-ui
+
+asciidoc:
+  attributes:
+    product-name: Maildeno
+    product-name-short: Maildeno
+    hide-uri-scheme: ''
+    experimental: ''
+    source-highlighter: highlight.js
+    js-sdk-version: '1.0.0'
+    py-sdk-version: '1.0.0'
+    api-base-url: 'https://api.maildeno.com'
+    dashboard-url: 'https://app.maildeno.com'
+    support-email: 'support@maildeno.com'
+  extensions:
+    - '@asciidoctor/tabs'
+
+output:
+  dir: ./build/site
+  clean: true

@@ -1,0 +1,93 @@
+= Python SDK
+:description: Official Maildeno Python SDK reference — sync and async clients.
+
+The `maildeno` PyPI package is the official Python SDK. It ships two clients:
+
+* `MaildenoClient` — synchronous (WSGI, scripts, Celery)
+* `AsyncMaildenoClient` — asynchronous (asyncio, FastAPI, Starlette)
+
+[source,bash]
+----
+pip install maildeno
+# or
+poetry add maildeno
+# or
+uv add maildeno
+----
+
+Requires Python 3.9+ and `httpx >= 0.28.1`.
+
+== Pages in this section
+
+* xref:py-installation.adoc[Installation & Setup]
+* xref:py-rendering.adoc[Rendering]
+* xref:py-dynamic-data.adoc[Dynamic Data (merge tags & context)]
+* xref:py-error-handling.adoc[Error Handling]
+* xref:py-environments.adoc[Frameworks & Environments]
+
+== 30-second example
+
+[tabs]
+====
+Sync::
++
+[source,python]
+----
+import os
+from maildeno import MaildenoClient
+
+client = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"])
+
+html = client.render_html("550e8400-e29b-41d4-a716-446655440000", {
+    "merge_tags": {
+        "text": {"name": "Noruwa", "company": "Maildeno"},
+        "url":  {"reset_url": "https://app.example.com/reset/abc123"},
+    },
+    "context": {"plan": "pro"},
+})
+
+print(html)  # <!DOCTYPE html>...
+----
+
+Async::
++
+[source,python]
+----
+import asyncio
+import os
+from maildeno import AsyncMaildenoClient
+
+async def main():
+    async with AsyncMaildenoClient(api_key=os.environ["MAILDENO_API_KEY"]) as client:
+        html = await client.render_html(
+            "550e8400-e29b-41d4-a716-446655440000",
+            {
+                "merge_tags": {"text": {"name": "Noruwa"}},
+                "context":    {"plan": "pro"},
+            },
+        )
+        print(html)
+
+asyncio.run(main())
+----
+====
+
+== Exported types
+
+[source,python]
+----
+from maildeno import (
+    MaildenoClient,
+    AsyncMaildenoClient,
+    MaildenoError,
+)
+from maildeno import (
+    RenderTarget,     # Literal["html", "react-email", "mjml"]
+    RenderResult,     # frozen dataclass
+    DynamicData,      # TypedDict({merge_tags?, context?})
+    MergeTagGroup,    # TypedDict({text?, url?, attr?})
+    ContextValue,     # str | int | float | bool
+    SdkErrorCode,     # Literal[...] of error code strings
+    ValidationIssue,  # TypedDict for entries on err.issues
+)
+----

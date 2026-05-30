@@ -1,0 +1,29 @@
+= Changelog
+:description: Release history for Maildeno and its SDKs.
+
+All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning].
+
+== 2025-01-xx — SDK v1.0.0
+
+=== JavaScript / TypeScript SDK
+
+* Initial stable release of `maildeno` npm package
+* `MaildenoClient` with `render()`, `renderHtml()`, `renderReact()`, `renderMjml()` methods
+* Full TypeScript type exports
+* Structured `MaildenoError` with `code`, `message`, `status`, and `issues` properties
+
+=== Python SDK
+
+* Initial stable release of `maildeno` PyPI package
+* `MaildenoClient` (sync, `httpx`) and `AsyncMaildenoClient` (async, `httpx.AsyncClient`)
+* Both context-manager and long-lived client patterns supported
+* Bring-your-own `httpx` client for advanced transport customisation
+* Full PEP 561 type stubs (`mypy` / `pyright` compatible)
+
+=== Platform
+
+* Drag-and-drop email builder
+* Three render targets: HTML, React Email, MJML
+* Merge tags: `text`, `url`, `attr`
+* Visibility rules engine with context evaluation
+* Scoped API keys

@@ -1,0 +1,11 @@
+# docs/antora.yml — Antora component descriptor
+# This file defines the "maildeno" documentation component.
+
+name: ROOT
+title: Maildeno Documentation
+version: ~        # ~ means "unversioned" — a single canonical version
+start_page: index.adoc
+nav:
+  - modules/ROOT/nav.adoc
+  - modules/builder/nav.adoc
+  - modules/sdk/nav.adoc

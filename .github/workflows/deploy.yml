@@ -1,0 +1,156 @@
+# .github/workflows/deploy.yml
+#
+# Maildeno Docs — Build (Antora) & Deploy (Cloudflare Pages)
+#
+# Triggers:
+#   • Push to `main`  → build + deploy to production
+#   • Push to a PR    → build + deploy to a preview URL
+#   • Manual dispatch → build + deploy to production
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   — CF API token with "Cloudflare Pages:Edit" permission
+#   CLOUDFLARE_ACCOUNT_ID  — your Cloudflare account ID (found in dashboard)
+#
+# Optional repository variables (Settings → Secrets and variables → Actions → Variables):
+#   CF_PAGES_PROJECT_NAME  — Cloudflare Pages project name (default: maildeno-docs)
+#   GA_MEASUREMENT_ID      — Google Analytics 4 Measurement ID (optional)
+
+name: Build & Deploy Docs
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Only one deployment per ref at a time; cancel in-progress runs on new push
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  CF_PAGES_PROJECT: ${{ vars.CF_PAGES_PROJECT_NAME || 'maildeno-docs' }}
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # JOB 1: Build the Antora site
+  # ─────────────────────────────────────────────────────────────
+  build:
+    name: Build Antora site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Antora needs full history for last-updated dates
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Inject GA Measurement ID if provided
+      - name: Patch playbook with GA ID
+        if: ${{ vars.GA_MEASUREMENT_ID != '' }}
+        run: |
+          sed -i "s/google_analytics: ''/google_analytics: '${{ vars.GA_MEASUREMENT_ID }}'/" antora-playbook.yml
+
+      - name: Build documentation site
+        run: npm run build:local
+        env:
+          # Forward any extra Antora attributes from the environment
+          ANTORA_LOG_LEVEL: warn
+
+      - name: Verify build output exists
+        run: |
+          test -d build/site || (echo "ERROR: build/site directory not found" && exit 1)
+          echo "Build output size: $(du -sh build/site | cut -f1)"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-${{ github.sha }}
+          path: build/site
+          retention-days: 7
+          if-no-files-found: error
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 2: Deploy to Cloudflare Pages
+  # ─────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Cloudflare Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+
+    # Only run if secrets are available (prevents failures on forks)
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+
+    permissions:
+      contents: read
+      deployments: write   # required for GitHub deployment status updates
+      pull-requests: write # required to post preview URL comments on PRs
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site-${{ github.sha }}
+          path: build/site
+
+      - name: Deploy to Cloudflare Pages
+        id: cf-deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >
+            pages deploy build/site
+            --project-name=${{ env.CF_PAGES_PROJECT }}
+            --commit-hash=${{ github.sha }}
+            --commit-message="${{ github.event.head_commit.message || 'Manual deploy' }}"
+            --branch=${{ github.head_ref || github.ref_name }}
+
+      # Post preview URL as a PR comment
+      - name: Comment preview URL on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: docs-preview
+          message: |
+            ## 📖 Docs preview deployed
+
+            | | |
+            |---|---|
+            | **Branch** | `${{ github.head_ref }}` |
+            | **Commit** | `${{ github.sha }}` |
+            | **Preview URL** | ${{ steps.cf-deploy.outputs.deployment-url }} |
+
+            _This comment updates automatically on each push._
+
+      # Summarise deployment in the Actions run summary
+      - name: Write deployment summary
+        if: always()
+        run: |
+          echo "## 🚀 Deployment summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Key | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Project | \`${{ env.CF_PAGES_PROJECT }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.head_ref || github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | ${{ steps.cf-deploy.outputs.deployment-url }} |" >> $GITHUB_STEP_SUMMARY

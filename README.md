@@ -69,8 +69,8 @@ maildeno-docs/
 ### First-time setup
 
 ```bash
-git clone https://github.com/YOUR_ORG/maildeno-docs.git
-cd maildeno-docs
+git clone https://github.com/maildeno/docs.git
+cd docs
 npm install
 ```
 
@@ -228,13 +228,11 @@ image::builder:editor-canvas.png[Editor canvas,role=center,width=100%]
 <module>-<feature>-<description>.png
 
 Examples:
-  editor-canvas.png
-  editor-blocks-panel.png
-  builder-merge-tags-in-editor.png
-  api-keys-create.png
+  canvas.png
+  email-health.png
+  merge-tag-detected.png
+  vis-rule.png
 ```
-
-**Format:** PNG preferred. Use WebP for large screenshots to reduce page weight. Target width: 1200–1600px for full-width images.
 
 ---
 

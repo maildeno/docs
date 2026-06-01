@@ -3,6 +3,10 @@
 
 Maildeno can render any template into three output formats. You choose the target at render time — no changes to the template are needed.
 
+image::export-format.PNG[Export formats on builder,role=center]
+
+Multiple export formats on a single template design: **HTML**, **React Email** and **MJML**.
+
 == Render targets
 
 [cols="1,2,3",options=header]
@@ -28,6 +32,7 @@ Maildeno can render any template into three output formats. You choose the targe
 ====
 JavaScript::
 +
+--
 [source,typescript]
 ----
 // HTML (default)
@@ -42,17 +47,19 @@ const mjml = await client.renderMjml("template-id")
 // Or use render() for full control
 const result = await client.render({
   templateId: "template-id",
-  target: "react-email",   // <1>
+  target: "react-email",   
   dynamicData: { ... },
 })
 console.log(result.output)
 console.log(result.target)      // "react-email"
 console.log(result.templateId)  // "550e8400-..."
 ----
-<1> `"html" | "react-email" | "mjml"`
+  `"html" | "react-email" | "mjml"`
+--
 
 Python::
 +
+--
 [source,python]
 ----
 # HTML (default)
@@ -67,15 +74,17 @@ mjml = client.render_mjml("template-id")
 # Or render() for full control
 result = client.render(
     template_id="template-id",
-    target="react-email",   # <1>
+    target="react-email",   
     dynamic_data={ ... },
 )
 print(result.output)
 print(result.target)       # "react-email"
 print(result.template_id)  # "550e8400-..."
 ----
-<1> `"html"`, `"react-email"`, or `"mjml"`
+  `"html"`, `"react-email"`, or `"mjml"`
+--
 ====
+
 
 == API key scopes and targets
 

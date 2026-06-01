@@ -11,7 +11,7 @@ site:
 
 content:
   sources:
-    - url: https://github.com/YOUR_ORG/maildeno-docs.git
+    - url: https://github.com/maildeno/docs.git
       branches: [main]
       start_path: docs
 
@@ -36,7 +36,7 @@ asciidoc:
     js-sdk-version: '1.0.0'
     py-sdk-version: '1.0.0'
     api-base-url: 'https://api.maildeno.com'
-    dashboard-url: 'https://app.maildeno.com'
+    dashboard-url: 'https://maildeno.com/login'
     support-email: 'support@maildeno.com'
   extensions:
     - '@asciidoctor/tabs'

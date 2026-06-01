@@ -4,7 +4,7 @@
 # This file is read by Wrangler CLI during local `wrangler pages dev`
 # and is referenced by the GitHub Actions deploy step.
 #
-# ⚠️  Do NOT store secrets here. Use:
+#   Do NOT store secrets here. Use:
 #   - GitHub Actions secrets for CI/CD
 #   - `wrangler secret put` for manually managed secrets
 #   - .dev.vars for local development (add to .gitignore)

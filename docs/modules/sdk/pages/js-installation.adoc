@@ -52,7 +52,7 @@ The `MaildenoClient` is stateless — it holds only configuration. There is no c
 
 [source,typescript]
 ----
-// ✅ Module-level singleton — recommended
+// Module-level singleton — recommended
 const maildeno = new MaildenoClient({ apiKey: process.env.MAILDENO_API_KEY! })
 
 export async function sendWelcomeEmail(name: string, to: string) {

@@ -11,7 +11,7 @@ API keys authenticate every request to the Render API. Keys are created in the M
 . Click **Create**.
 . Copy the key — it is shown only once.
 
-image::api-keys-create.png[API key creation dialog showing name and targets fields,role=center,width=80%]
+image::apikey.PNG[API key creation dialog showing name and targets fields,role=center,width=80%]
 
 WARNING: Store keys in a secrets manager or environment variables. Never commit them to source control or expose them in client-side code.
 
@@ -31,18 +31,11 @@ WARNING: Store keys in a secrets manager or environment variables. Never commit 
 |`html` and `mjml` — `react-email` returns `403 FORBIDDEN`
 |===
 
-== Rotating a key
-
-. Go to **Dashboard → API Keys**.
-. Click **···** next to the key → **Rotate**.
-. A new key is generated. The old key is immediately revoked.
-
-CAUTION: Rotate one service at a time. Update the new key in your application *before* revoking the old one in a high-availability environment.
 
 == Revoking a key
 
 . Go to **Dashboard → API Keys**.
-. Click **···** next to the key → **Revoke**.
+. Click **Trash** icon to → **Revoke** key.
 . Confirm. Requests using the revoked key will immediately receive `401 INVALID_API_KEY`.
 
 == Key naming conventions (recommended)

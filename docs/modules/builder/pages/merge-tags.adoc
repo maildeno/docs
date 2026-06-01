@@ -79,12 +79,23 @@ merge_tags: {
 == Inserting merge tags in the editor
 
 . Select a text block or attribute field in the settings panel.
-. Click the **`{{ }}`** button in the toolbar.
+. On the block panel, you will see a section for inserting merge tags or type **{{** on the Rich Text Editor and a toolbar to insert merge tags will be shown.
 . Type the tag name and confirm.
 
-The editor shows merge tags highlighted in orange so they're easy to spot.
+The editor shows merge tags with symbol **{{ }}** so they're easy to spot.
 
-image::merge-tags-in-editor.png[Merge tag highlighted in the editor canvas,role=center,width=80%]
+.Merge tag highlighted in the editor canvas
+image::merge-tag-ppt.PNG[Merge tag highlighted in the editor canvas,role=center]
+
+.Detected merge tags listed in the Merge Tag panel
+image::merge-tag-detected.PNG[Merge tag Detect in the Merge tag panel,role=center]
+
+.Merge tag preview disabled — placeholder tokens remain visible
+image::merge-tag-preview-off.PNG[Merge tag Preview Off,role=center]
+
+.Merge tag preview enabled — tokens replaced with live values
+image::merge-tag-preview-on.PNG[Merge tag Preview On,role=center]
+
 
 == Missing and extra tags
 

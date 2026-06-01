@@ -22,57 +22,101 @@ Context values are *not* injected into email content — they only drive show/hi
 ** **Operator** — see <<operators>> below
 ** **Value** — the comparison value (e.g. `pro`)
 
-image::visibility-rule-editor.png[Visibility rule editor showing a plan equals pro condition,role=center,width=80%]
+.Visibility rule editor showing a plan equals pro condition
+image::vis-rule-ppt.PNG[Visibility rule editor showing a plan equals pro condition,role=center]
 
 Multiple rules on a single row use **AND** logic — all conditions must be satisfied for the row to appear.
+
+.Active visibility rules listed in the Visibility tab
+image::vis-rule-detected.PNG[Visibility rule detected in visibility tab,role=center]
+
+.Visibility rule configured for free-tier users
+image::vis-rule-free.PNG[Visibility rule for free users,role=center]
+
+.Visibility rule configured for pro-tier users
+image::vis-rule-pro.PNG[Visibility rule for pro users,role=center]
+
 
 [#operators]
 == Supported operators
 
 [cols="1,3,2",options=header]
+[cols="1,3,2", options="header"]
 |===
-|Operator|Behaviour|Example
+|Operator | Behaviour | Example
 
-|`equals`
-|Strict equality (case-sensitive)
-|`plan equals pro`
+|`==`
+|Strict equality
+|`plan == pro`
 
-|`not_equals`
+|`!=`
 |Strict inequality
-|`country not_equals us`
+|`country != us`
+
+|`contains`
+|Value contains the specified substring
+|`email contains gmail`
+
+|`not_contains`
+|Value does not contain the specified substring
+|`email not_contains yahoo`
+
+|`starts_with`
+|Value starts with the specified substring
+|`email starts_with admin`
+
+|`ends_with`
+|Value ends with the specified substring
+|`email ends_with .com`
 
 |`in`
 |Value is one of a comma-separated list
 |`plan in pro,enterprise`
 
 |`not_in`
-|Value is not in the list
+|Value is not one of the listed values
 |`country not_in us,ca`
 
-|`gt`
-|Numeric greater-than
-|`age gt 17`
+|`>`
+|Numeric greater than
+|`age > 17`
 
-|`gte`
-|Numeric greater-than-or-equal
-|`account_days gte 30`
+|`>=`
+|Numeric greater than or equal
+|`account_days >= 30`
 
-|`lt`
-|Numeric less-than
-|`days_remaining lt 7`
+|`<`
+|Numeric less than
+|`days_remaining < 7`
 
-|`lte`
-|Numeric less-than-or-equal
-|`usage_pct lte 100`
+|`<=`
+|Numeric less than or equal
+|`usage_pct <= 100`
 
-|`exists`
-|Key is present in context (any value)
-|`promo_code exists`
+|`is_empty`
+|Value is missing, null, or an empty string
+|`promo_code is_empty`
 
-|`not_exists`
-|Key is absent from context
-|`promo_code not_exists`
+|`is_not_empty`
+|Value exists and is not empty
+|`promo_code is_not_empty`
+
+|`date_before`
+|Date occurs before the specified date
+|`signup_date date_before 2026-01-01`
+
+|`date_after`
+|Date occurs after the specified date
+|`signup_date date_after 2026-01-01`
+
+|`date_on`
+|Date matches the specified date
+|`signup_date date_on 2026-01-01`
 |===
+
+NOTE: `contains`, `starts_with`, and `ends_with` operate on string values. 
+`>`, `>=`, `<`, and `<=` operate on numeric values. 
+Date operators expect ISO-8601 date values (for example, `2026-01-01`).
 
 == Passing context at render time
 

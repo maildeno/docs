@@ -11,12 +11,13 @@ This guide walks you from creating a template in the Maildeno builder to renderi
 == Step 1 — Create a template
 
 . Log in to the {dashboard-url}[Maildeno Dashboard].
-. Navigate to **Templates → New Template**.
+. Navigate to **Create Templates**.
+. Drag or click layout block onto the canvas.
 . Drag a *Heading* block and a *Text* block onto the canvas.
 . In the heading block, type `Hello {{ name }}` — this is a xref:builder:merge-tags.adoc[merge tag].
 . Click **Save**.
 
-image::builder:editor-new-template.png[Creating a new template in the editor,role=center,width=100%]
+image::card.PNG[Creating a new template in the editor,role=center]
 
 . Copy the **Template ID** from the template settings panel (it looks like `550e8400-e29b-41d4-a716-446655440000`).
 
@@ -55,50 +56,54 @@ Replace `<YOUR_API_KEY>` and `<YOUR_TEMPLATE_ID>` with your actual values.
 ====
 JavaScript / TypeScript::
 +
+--
 [source,typescript]
 ----
 import { MaildenoClient } from "maildeno"
 
 const client = new MaildenoClient({
-  apiKey: process.env.MAILDENO_API_KEY!, // <1>
+  apiKey: process.env.MAILDENO_API_KEY!, 
 })
 
 const html = await client.renderHtml(
   "<YOUR_TEMPLATE_ID>",
   {
     merge_tags: {
-      text: { name: "Noruwa" }, // <2>
+      text: { name: "Noruwa" }, 
     },
   }
 )
 
 console.log(html) // <!DOCTYPE html>...
 ----
-<1> Load your API key from an environment variable — never hard-code it.
-<2> The `name` merge tag fills in the `{{ name }}` placeholder in your template.
+  Load your API key from an environment variable — never hard-code it.
+  The `name` merge tag fills in the `{{ name }}` placeholder in your template.
+--
 
 Python (sync)::
 +
+--
 [source,python]
 ----
 import os
 from maildeno import MaildenoClient
 
-client = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"])  # <1>
+client = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"])  
 
 html = client.render_html(
     "<YOUR_TEMPLATE_ID>",
     {
         "merge_tags": {
-            "text": {"name": "Noruwa"},  # <2>
+            "text": {"name": "Noruwa"},  
         },
     },
 )
 
 print(html)  # <!DOCTYPE html>...
 ----
-<1> Load your API key from an environment variable.
-<2> Fills in the `{{ name }}` merge tag.
+  Load your API key from an environment variable.
+  Fills in the `{{ name }}` merge tag.
+--
 
 Python (async)::
 +

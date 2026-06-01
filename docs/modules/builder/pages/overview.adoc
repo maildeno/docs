@@ -3,7 +3,7 @@
 
 The Maildeno email builder is a visual, code-free environment for creating responsive email templates. Product and marketing teams use it to design emails; developers integrate the output via the Render API.
 
-image::editor-overview.png[Maildeno email builder main interface,role=center,width=100%]
+image::canvas.PNG[Maildeno email builder main interface,role=center]
 
 == Builder sections
 
@@ -14,7 +14,7 @@ The builder dashboard is split into three main areas:
 |Area|Description
 
 |**Template Library**
-|Browse, duplicate, and organise all your templates. Filter by tag or creation date.
+|Browse, duplicate, and organise all your templates. Filter system templates by tag.
 
 |**Editor**
 |Drag-and-drop canvas where you assemble and style your email layout.

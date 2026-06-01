@@ -44,10 +44,6 @@ Maildeno is a two-part product:
 
 * **Render API & SDKs** — A REST API (with official JavaScript/TypeScript and Python SDKs) that takes a template ID plus optional dynamic data and returns a fully rendered HTML, React Email, or MJML string ready to pipe into any email-sending service.
 
-.Maildeno Platform Architecture
-image::platform-architecture.png[Maildeno platform architecture diagram,role=center,width=100%]
-
-NOTE: Images above are placeholders. Replace them with your actual screenshots once available.
 
 == Key capabilities
 
@@ -96,5 +92,5 @@ NOTE: Images above are placeholders. Replace them with your actual screenshots o
 == Need help?
 
 * Browse the xref:builder:overview.adoc[Builder docs] or xref:sdk:overview.adoc[SDK Reference].
-* File a bug or feature request on https://github.com/YOUR_ORG/maildeno[GitHub].
+* File a bug or feature request on https://github.com/maildeno/docs[GitHub].
 * Email the team at mailto:{support-email}[{support-email}].

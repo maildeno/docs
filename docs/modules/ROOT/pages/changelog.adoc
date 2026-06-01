@@ -3,7 +3,7 @@
 
 All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning].
 
-== 2025-01-xx — SDK v1.0.0
+== 2025-01-06 — SDK v1.0.0
 
 === JavaScript / TypeScript SDK
 

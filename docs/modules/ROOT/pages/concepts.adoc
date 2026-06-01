@@ -82,7 +82,7 @@ See xref:sdk:api-keys.adoc[API Key Scopes] for creation and management details.
 Your app                    Maildeno Render API
 ─────────                   ───────────────────
   │                                  │
-  │  POST /v1/sdk/render             │
+  │                                  │
   │  {                               │
   │    template_id: "...",           │
   │    target: "html",               │

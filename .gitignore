@@ -2,6 +2,12 @@
 build/
 .cache/
 
+#gitignore
+.gitignore
+
+# Dev readme
+EDITING-GUIDE.md
+
 # Node
 node_modules/
 npm-debug.log*

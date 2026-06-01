@@ -2,11 +2,6 @@
 #
 # Maildeno Docs — Build (Antora) & Deploy (Cloudflare Pages)
 #
-# Triggers:
-#   • Push to `main`  → build + deploy to production
-#   • Push to a PR    → build + deploy to a preview URL
-#   • Manual dispatch → build + deploy to production
-#
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   CLOUDFLARE_API_TOKEN   — CF API token with "Cloudflare Pages:Edit" permission
 #   CLOUDFLARE_ACCOUNT_ID  — your Cloudflare account ID (found in dashboard)
@@ -32,7 +27,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '24'
   CF_PAGES_PROJECT: ${{ vars.CF_PAGES_PROJECT_NAME || 'maildeno-docs' }}
 
 jobs:
@@ -81,7 +76,7 @@ jobs:
         with:
           name: site-${{ github.sha }}
           path: build/site
-          retention-days: 7
+          retention-days: 3
           if-no-files-found: error
 
   # ─────────────────────────────────────────────────────────────
@@ -132,7 +127,7 @@ jobs:
         with:
           header: docs-preview
           message: |
-            ## 📖 Docs preview deployed
+            ## Docs preview deployed
 
             | | |
             |---|---|
@@ -146,7 +141,7 @@ jobs:
       - name: Write deployment summary
         if: always()
         run: |
-          echo "## 🚀 Deployment summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Key | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|-------|" >> $GITHUB_STEP_SUMMARY

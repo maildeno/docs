@@ -3,7 +3,7 @@
 
 Templates are the central design artefact in Maildeno. Each template has a unique ID, a draft state, and a published state.
 
-image::template-library.png[Template library showing a grid of email templates,role=center,width=100%]
+image::template-gallery.PNG[Template gallery library showing a grid of email templates,role=center]
 
 == Creating a template
 
@@ -23,7 +23,7 @@ Every template is assigned a UUID at creation, for example:
 This ID is stable — it never changes even if you rename or republish the template. Pass it to the SDK or REST API to render the template.
 
 .Find the Template ID
-Copy it from **Template Settings → Template ID** in the top-right corner of the editor.
+Copy it from **Template Cards** or in the top-right corner of the editor.
 
 == Draft vs published
 
@@ -37,22 +37,22 @@ Maildeno maintains two independent versions of each template:
 |The version you're currently editing. Changes are saved here and do not affect live renders.
 
 |**Published**
-|The version served by the Render API. Update it by clicking **Publish**.
+|The version served by the Render API. Update it by clicking **Save**.
 |===
 
-WARNING: Clicking **Publish** replaces the published version immediately. All render calls using this template ID will reflect the new version. Validate in a staging environment first.
+WARNING: Clicking **Save** replaces the published version immediately. All render calls using this template ID will reflect the new version. Validate in a staging environment first.
 
-== Duplicating a template
+// == Duplicating a template
 
-. Open a template in the editor.
-. Click **···** (overflow menu) → **Duplicate**.
-. The duplicate gets a new Template ID.
+// . Open a template in the editor.
+// . Click **Export** button → **Duplicate**.
+// . The duplicate gets a new Template ID.
 
-Duplication is useful for creating variations (e.g. one template per locale or per plan tier) while sharing a common structure.
+// Duplication is useful for creating variations (e.g. one template per locale or per plan tier) while sharing a common structure.
 
 == Deleting a template
 
-. Go to **Template Settings** → **Danger Zone** → **Delete Template**.
+. On the **Template List Page** → hover on the template card, you will see the **Delete** button, click the delete button → a modal will show for final deletion.
 . Confirm the deletion.
 
 CAUTION: Deleting a template is permanent. Any application code referencing its ID will receive a `TEMPLATE_NOT_FOUND` error.
@@ -74,5 +74,5 @@ Apply tags to templates from the template library to keep large collections mana
 |Unlimited
 
 |Enterprise
-|Unlimited + custom domains
+|Unlimited
 |===

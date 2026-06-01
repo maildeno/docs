@@ -7,17 +7,21 @@
     "node": ">=18.0.0"
   },
   "scripts": {
+    "clean": "rm -rf build",
     "build": "antora --fetch antora-playbook.yml",
     "build:local": "antora antora-playbook-local.yml",
-    "serve": "npx http-server build/site -p 5000 -c-1 --cors -o",
-    "dev": "npm run build:local && npm run serve",
-    "clean": "rm -rf build",
-    "build:ci": "antora antora-playbook-local.yml"
+    "build:ci": "antora antora-playbook-local.yml",
+    "watch": "chokidar \"docs/**/*\" -c \"npm run build:local\"",
+    "serve": "browser-sync start --server build/site --files \"build/site/**/*\" --no-open",
+    "dev": "npm run build:local && concurrently \"npm run watch\" \"npm run serve\""
   },
   "devDependencies": {
     "@antora/cli": "3.1.9",
     "@antora/site-generator": "3.1.9",
-    "http-server": "^14.1.1",
-    "@asciidoctor/tabs": "^1.0.0-beta.6"
+    "@asciidoctor/tabs": "^1.0.0-beta.6",
+    "browser-sync": "^3.0.4",
+    "chokidar-cli": "^3.0.0",
+    "concurrently": "^10.0.1",
+    "http-server": "^14.1.1"
   }
 }

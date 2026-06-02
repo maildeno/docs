@@ -76,7 +76,7 @@ result = await client.render(
 
 == `render()` parameters
 
-[cols="1,1,1,3",options=header]
+[.table-scroll, cols="1,1,1,3", options=header]
 |===
 |Parameter|Type|Required|Description
 

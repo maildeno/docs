@@ -129,7 +129,7 @@ You should see a complete HTML document printed to stdout. 🎉
 
 == Next steps
 
-[cols="1,1",frame=none,grid=none]
+[.table-scroll, cols="1,1",frame=none,grid=none]
 |===
 a|
 * xref:builder:merge-tags.adoc[Learn about merge tags]

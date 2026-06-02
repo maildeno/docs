@@ -29,7 +29,7 @@ Copy it from **Template Cards** or in the top-right corner of the editor.
 
 Maildeno maintains two independent versions of each template:
 
-[cols="1,3",options=header]
+[.table-scroll, cols="1,3", options=header]
 |===
 |Version|Description
 
@@ -63,16 +63,19 @@ Apply tags to templates from the template library to keep large collections mana
 
 == Template limits
 
-[cols="1,1",options=header]
+[.table-scroll, cols="1,1", options=header]
 |===
 |Plan|Template limit
 
 |Free
-|5 templates
+|3 templates
+
+|Standard
+|Unlimited
 
 |Pro
 |Unlimited
 
-|Enterprise
-|Unlimited
+// |Enterprise
+// |Unlimited
 |===

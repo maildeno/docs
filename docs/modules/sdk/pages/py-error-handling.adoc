@@ -19,7 +19,7 @@ except MaildenoError as err:
 
 == Error properties
 
-[cols="1,1,3",options=header]
+[.table-scroll, cols="1,1,3", options=header]
 |===
 |Property|Type|Description
 
@@ -43,7 +43,7 @@ except MaildenoError as err:
 [#error-codes]
 == Error codes
 
-[cols="1,1,3",options=header]
+[.table-scroll, cols="1,1,3", options=header]
 |===
 |Code|HTTP status|When it occurs
 

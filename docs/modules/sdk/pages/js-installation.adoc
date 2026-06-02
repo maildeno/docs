@@ -31,7 +31,7 @@ const client = new MaildenoClient({
 
 === Configuration options
 
-[cols="1,1,1,3",options=header]
+[.table-scroll, cols="1,1,1,3", options=header]
 |===
 |Option|Type|Default|Description
 
@@ -65,7 +65,7 @@ export async function sendWelcomeEmail(name: string, to: string) {
 
 == Node.js version requirements
 
-[cols="1,2",options=header]
+[.table-scroll, cols="1,2", options=header]
 |===
 |Node version|Notes
 
@@ -94,7 +94,7 @@ import { MaildenoClient } from "maildeno"
 
 == Other runtimes
 
-[cols="1,3",options=header]
+[.table-scroll, cols="1,3", options=header]
 |===
 |Runtime|Notes
 

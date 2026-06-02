@@ -99,7 +99,7 @@ image::merge-tag-preview-on.PNG[Merge tag Preview On,role=center]
 
 == Missing and extra tags
 
-[cols="2,3",options=header]
+[.table-scroll, cols="2,3", options=header]
 |===
 |Scenario|Behaviour
 

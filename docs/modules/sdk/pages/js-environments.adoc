@@ -1,4 +1,4 @@
-= Environments & Frameworks
+= Environments {amp} Frameworks
 :description: Use the Maildeno JavaScript SDK in Node.js, Next.js, Nuxt, Cloudflare Workers, and more.
 
 == Node.js (18+)

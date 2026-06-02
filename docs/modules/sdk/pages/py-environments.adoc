@@ -1,4 +1,4 @@
-= Frameworks & Environments
+= Frameworks {amp} Environments
 :description: Use the Maildeno Python SDK with FastAPI, Flask, Django, and more.
 
 == Sync vs async — which to pick

@@ -24,7 +24,7 @@ try {
 
 == Error properties
 
-[cols="1,1,3",options=header]
+[.table-scroll, cols="1,1,3", options=header]
 |===
 |Property|Type|Description
 
@@ -48,7 +48,7 @@ try {
 [#error-codes]
 == Error codes
 
-[cols="1,1,3",options=header]
+[.table-scroll, cols="1,1,3", options=header]
 |===
 |Code|HTTP status|When it occurs
 

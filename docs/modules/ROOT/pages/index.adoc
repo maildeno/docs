@@ -9,32 +9,25 @@ Maildeno gives product teams a drag-and-drop email editor and gives developers a
 
 == Where do you want to start?
 
-[cols="1,1,1",frame=none,grid=none]
-|===
-a|
-.🚀 Quickstart
---
-New here? Get your first email rendered in under five minutes.
-
-xref:quickstart.adoc[Get started →]
---
-
-a|
-.✏️ Email Builder
---
-Learn the editor: templates, merge tags, visibility rules, and exporting.
-
-xref:builder:overview.adoc[Explore the builder →]
---
-
-a|
-.🔌 SDK Reference
---
-Integrate rendering into your app with the JavaScript or Python SDK.
-
-xref:sdk:overview.adoc[Browse the SDK →]
---
-|===
+++++
+<div class="cards-grid">
+  <div class="card">
+    <p class="card-title">🚀 Quickstart</p>
+    <p>New here? Get your first email rendered in under five minutes.</p>
+    <a href="quickstart.html">Get started →</a>
+  </div>
+  <div class="card">
+    <p class="card-title">✏️ Email Builder</p>
+    <p>Learn the editor: templates, merge tags, visibility rules, and exporting.</p>
+    <a href="builder/overview.html">Explore the builder →</a>
+  </div>
+  <div class="card">
+    <p class="card-title">🔌 SDK Reference</p>
+    <p>Integrate rendering into your app with the JavaScript or Python SDK.</p>
+    <a href="sdk/overview.html">Browse the SDK →</a>
+  </div>
+</div>
+++++
 
 == What is Maildeno?
 

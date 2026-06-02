@@ -9,7 +9,7 @@ image::canvas.PNG[Maildeno email builder main interface,role=center]
 
 The builder dashboard is split into three main areas:
 
-[cols="1,3",options=header]
+[.table-scroll, cols="1,3", options=header]
 |===
 |Area|Description
 

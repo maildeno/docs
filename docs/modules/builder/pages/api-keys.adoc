@@ -17,7 +17,7 @@ WARNING: Store keys in a secrets manager or environment variables. Never commit 
 
 == Target scopes
 
-[cols="1,2",options=header]
+[.table-scroll, cols="1,2", options=header]
 |===
 |Targets value|Allowed render calls
 
@@ -56,7 +56,7 @@ Examples:
 
 [source,bash]
 ----
-curl -X POST {api-base-url}/api/v1/keys \
+curl -X POST https://api.maildeno.com/v1/keys \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <ADMIN_KEY>" \
   -d '{"name": "HTML only", "targets": ["html"]}'

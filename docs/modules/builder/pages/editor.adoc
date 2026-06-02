@@ -40,7 +40,7 @@ image::layouts.PNG[Layouts for template,role=center]
 Drag or click a block from the **Blocks** panel and drop it into any column. You can reorder blocks within a column or move them to another column.
 
 .Available blocks
-[cols="1,3"]
+[.table-scroll, cols="1,3"]
 |===
 |Block|Description
 

@@ -5,7 +5,7 @@ Maildeno ships official SDKs for JavaScript/TypeScript and Python. Both wrap the
 
 == Available SDKs
 
-[cols="1,1,1,1",options=header]
+[.table-scroll, cols="1,1,1,1", options=header]
 |===
 |Language|Package|Version|Minimum runtime
 
@@ -22,7 +22,7 @@ Maildeno ships official SDKs for JavaScript/TypeScript and Python. Both wrap the
 
 == Quick comparison
 
-[cols="2,3,3",options=header]
+[.table-scroll, cols="2,3,3", options=header]
 |===
 |Feature|JavaScript SDK|Python SDK
 
@@ -55,7 +55,7 @@ Maildeno ships official SDKs for JavaScript/TypeScript and Python. Both wrap the
 
 Both SDKs expose the same methods:
 
-[cols="2,3",options=header]
+[.table-scroll, cols="2,3", options=header]
 |===
 |Method|Returns
 

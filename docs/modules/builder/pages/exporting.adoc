@@ -9,7 +9,7 @@ Multiple export formats on a single template design: **HTML**, **React Email** a
 
 == Render targets
 
-[cols="1,2,3",options=header]
+[.table-scroll, cols="1,2,3", options=header]
 |===
 |Target string|Format|Best for
 
@@ -93,7 +93,7 @@ Each API key can be restricted to specific targets. Requesting a target outside 
 [source,bash]
 ----
 # Create a key scoped to HTML only
-POST https://api.maildeno.com/api/v1/keys
+POST https://api.maildeno.com/v1/keys
 { "name": "Production HTML key", "targets": ["html"] }
 ----
 

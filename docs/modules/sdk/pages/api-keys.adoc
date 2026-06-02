@@ -5,7 +5,7 @@ API keys authenticate every request and can be scoped to restrict which render t
 
 == Target scopes
 
-[cols="1,2",options=header]
+[.table-scroll, cols="1,2", options=header]
 |===
 |Targets value|Allowed render calls
 

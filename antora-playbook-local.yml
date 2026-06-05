@@ -3,7 +3,7 @@
 # Usage: npm run build:local
 
 site:
-  title: Maildeno Docs
+  title: Docs
   url: http://localhost:5000
   start_page: ROOT::index.adoc
 

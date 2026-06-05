@@ -2,7 +2,7 @@
 # Pulls content directly from GitHub. Used by CI/CD.
 
 site:
-  title: Maildeno Docs
+  title: Docs
   url: https://docs.maildeno.com
   start_page: ROOT::index.adoc
   robots: allow

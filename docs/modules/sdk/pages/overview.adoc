@@ -1,7 +1,9 @@
 = SDK Overview
 :description: Overview of the official Maildeno SDKs for JavaScript/TypeScript and Python.
 
-Maildeno ships official SDKs for JavaScript/TypeScript and Python. Both wrap the same Render REST API and expose an identical conceptual surface — only the language idioms differ.
+Maildeno ships official SDKs for JavaScript/TypeScript and Python. Both expose an identical conceptual surface — only the language idioms differ.
+
+Since v2.0 the SDKs render *in-process*: they fetch a template's JSON from Maildeno once via `GET /v1/sdk/template/{id}`, cache it locally (memory or disk), and render HTML / React Email / MJML on your own server. Your merge tags and visibility context never leave your infrastructure. See xref:js-caching.adoc[JS Caching] / xref:py-caching.adoc[Python Caching] for the caching model.
 
 == Available SDKs
 
@@ -49,6 +51,14 @@ Maildeno ships official SDKs for JavaScript/TypeScript and Python. Both wrap the
 |Validation errors
 |`err.issues: ValidationIssue[]`
 |`err.issues: list[ValidationIssue]`
+
+|Rendering
+|In-process (embedded engine)
+|In-process (embedded Wasm engine)
+
+|Caching
+|Memory (default) or disk, with stale-on-error fallback
+|Memory (default) or disk, with stale-on-error fallback
 |===
 
 == Render methods

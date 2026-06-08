@@ -19,11 +19,12 @@ Requires Python 3.9+ and `httpx >= 0.28.1`.
 
 == Pages in this section
 
-* xref:py-installation.adoc[Installation & Setup]
+* xref:py-installation.adoc[Installation {amp} Setup]
 * xref:py-rendering.adoc[Rendering]
-* xref:py-dynamic-data.adoc[Dynamic Data (merge tags & context)]
+* xref:py-caching.adoc[Caching] — memory, disk, and stale-on-error fallback
+* xref:py-dynamic-data.adoc[Dynamic Data (merge tags {amp} context)]
 * xref:py-error-handling.adoc[Error Handling]
-* xref:py-environments.adoc[Frameworks & Environments]
+* xref:py-environments.adoc[Frameworks {amp} Environments]
 
 == 30-second example
 
@@ -83,10 +84,12 @@ from maildeno import (
 )
 from maildeno import (
     RenderTarget,     # Literal["html", "react-email", "mjml"]
-    RenderResult,     # frozen dataclass
+    RenderResult,     # frozen dataclass (includes from_stale_cache)
     DynamicData,      # TypedDict({merge_tags?, context?})
     MergeTagGroup,    # TypedDict({text?, url?, attr?})
     ContextValue,     # str | int | float | bool
+    CacheConfig,      # TypedDict({type?, path?, ttl?, max_entries?})
+    TemplateJson,     # TypedDict — raw shape of GET /v1/sdk/template/{id}
     SdkErrorCode,     # Literal[...] of error code strings
     ValidationIssue,  # TypedDict for entries on err.issues
 )

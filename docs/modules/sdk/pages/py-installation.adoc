@@ -1,4 +1,4 @@
-= Installation & Setup
+= Installation {amp} Setup
 :description: Install and configure the Maildeno Python SDK.
 
 == Install
@@ -56,10 +56,20 @@ client = AsyncMaildenoClient(
 |—
 |**Required.** Your Maildeno API key.
 
+|`base_url`
+|`str`
+|`https://api.maildeno.com`
+|Base URL of the Maildeno API. Override only when proxying through your own infrastructure or running a self-hosted instance.
+
 |`timeout`
 |`float`
 |`30.0`
 |Request timeout in seconds. Raises `TIMEOUT` if exceeded.
+
+|`cache`
+|`CacheConfig`
+|memory
+|Caching strategy and tuning (`type`, `path`, `ttl`, `max_entries`). Omit for memory caching with defaults. See xref:py-caching.adoc[Caching].
 
 |`http_client`
 |`httpx.Client` / `httpx.AsyncClient`

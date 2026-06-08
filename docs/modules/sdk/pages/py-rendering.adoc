@@ -104,10 +104,13 @@ result = await client.render(
 ----
 @dataclass(frozen=True)
 class RenderResult:
-    output:      str           # the rendered template string
-    target:      RenderTarget  # "html" | "react-email" | "mjml"
-    template_id: str           # the UUID that was rendered
+    output:           str           # the rendered template string
+    target:           RenderTarget  # "html" | "react-email" | "mjml"
+    template_id:      str           # the UUID that was rendered
+    from_stale_cache: bool = False  # True if rendered from stale cache (server unreachable)
 ----
+
+NOTE: `from_stale_cache` is only available on the object returned by `render()` — the convenience methods return the output string directly. See xref:py-caching.adoc[Caching] for how the cache and stale-on-error fallback work.
 
 == Without dynamic data
 

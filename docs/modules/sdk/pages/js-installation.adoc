@@ -1,4 +1,4 @@
-= Installation & Setup
+= Installation {amp} Setup
 :description: Install and configure the Maildeno JavaScript/TypeScript SDK.
 
 == Install
@@ -44,6 +44,11 @@ const client = new MaildenoClient({
 |`number`
 |`30000`
 |Request timeout in milliseconds. Throws `TIMEOUT` if exceeded.
+
+|`cache`
+|`CacheConfig`
+|memory
+|Caching strategy and tuning (`type`, `path`, `ttl`, `maxEntries`). Omit for memory caching with defaults. See xref:js-caching.adoc[Caching].
 |===
 
 == Client lifecycle

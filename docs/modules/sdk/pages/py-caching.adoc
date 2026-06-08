@@ -1,0 +1,213 @@
+= Caching
+:description: How the Maildeno Python SDK caches template JSON — memory, disk, stale-on-error fallback, and cache management.
+
+Since v2.0 the SDK renders templates *in-process*. Template JSON is fetched from the Maildeno server **once**, cached locally, and rendered with the embedded Wasm engine on every subsequent call. Your merge tags and visibility context never leave your server.
+
+This page explains the caching model and how to configure, inspect, and manage it.
+
+== How caching works
+
+When you call any render method, the SDK walks three tiers before it touches the network:
+
+[source]
+----
+client.render_html(template_id)
+  │
+  ├─ 1. In-process memory cache ───── HIT → render immediately (0 ms, pure CPU)
+  │         │ miss
+  │         ▼
+  ├─ 2. Disk cache (if type="disk") ─ HIT → load into memory, then render
+  │         │ miss
+  │         ▼
+  ├─ 3. GET /v1/sdk/template/{id} ─── network call (first render, or after TTL expiry)
+  │         │ store in memory (and on disk, if configured)
+  │         ▼
+  └─ 4. Render in-process with the Wasm engine
+            merge tags & context are applied locally and never sent to Maildeno
+----
+
+* The network call to Maildeno happens **at most once per template per TTL window**.
+* After the first fetch, every subsequent render is pure CPU — no I/O, no added latency.
+* `AsyncMaildenoClient` dispatches the Wasm render to `asyncio`'s default thread-pool executor, so the event loop is never blocked.
+* The Wasm engine instance is loaded lazily on the first render and reused for the process lifetime. A `threading.Lock` guarantees exactly-once initialisation even under concurrent startup.
+
+== Configuration
+
+Pass a `cache` dict to the constructor. Omit it entirely to use memory caching with default settings.
+
+[source,python]
+----
+from maildeno import MaildenoClient
+
+client = MaildenoClient(
+    api_key=os.environ["MAILDENO_API_KEY"],
+    cache={
+        "type":        "memory",            # "memory" (default) or "disk"
+        "path":        "/var/cache/maildeno",  # required when type="disk"
+        "ttl":         300_000,             # freshness window in ms (default 5 min)
+        "max_entries": 50,                  # evict oldest beyond this (default 50)
+    },
+)
+----
+
+[.table-scroll, cols="1,1,1,3", options=header]
+|===
+|Key|Type|Default|Description
+
+|`type`
+|`"memory" \| "disk"`
+|`"memory"`
+|Caching strategy. Memory lives in the process heap; disk persists to the filesystem.
+
+|`path`
+|`str`
+|`".maildeno-cache"`
+|Directory for disk-cached entries. Only used when `type="disk"`. Created automatically if it does not exist.
+
+|`ttl`
+|`int`
+|`300_000`
+|How long (milliseconds) a cached template is considered fresh. After expiry the SDK attempts a re-fetch.
+
+|`max_entries`
+|`int`
+|`50`
+|Maximum number of templates held before the oldest is evicted.
+|===
+
+The `cache` (and the Wasm engine) are attached to the client instance. Instantiate the client *once* at application startup and reuse it across requests.
+
+== Memory cache (default)
+
+Zero configuration required. The cache lives in the process heap and is thread-safe.
+
+[source,python]
+----
+# Defaults — no cache config needed
+client = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"])
+
+# Explicit memory config with a custom TTL
+client = MaildenoClient(
+    api_key=os.environ["MAILDENO_API_KEY"],
+    cache={
+        "type":        "memory",   # "memory" is the default
+        "ttl":         60_000,     # 60 s instead of 5 min
+        "max_entries": 100,
+    },
+)
+----
+
+*When to use:* almost always — unless your process restarts frequently (AWS Lambda, Cloud Run) and you want the cache to survive cold starts.
+
+*Trade-off:* the cache is lost on process exit, and each worker process (Gunicorn, uWSGI) maintains its own independent copy.
+
+== Disk cache
+
+Persists template JSON to the local filesystem. Disk-cached entries survive process restarts and are shared by all workers pointing at the same directory.
+
+[source,python]
+----
+client = MaildenoClient(
+    api_key=os.environ["MAILDENO_API_KEY"],
+    cache={
+        "type":        "disk",
+        "path":        "/var/cache/maildeno",  # defaults to ".maildeno-cache"
+        "ttl":         600_000,                # 10 min
+        "max_entries": 200,
+    },
+)
+----
+
+Each template is stored as a JSON file at `<path>/<template-id>.json`. Writes are atomic — a temp file followed by `os.replace` — so concurrent Gunicorn workers can safely write the same files without corruption.
+
+*When to use:*
+
+* AWS Lambda / Cloud Run / serverless, where cold-start latency from a network fetch adds unacceptable overhead.
+* Multi-worker Gunicorn / uWSGI deployments sharing a filesystem.
+* Long-lived background workers where you want cache persistence across restarts.
+
+== Stale-on-error fallback
+
+When a cached template's TTL expires, the SDK attempts a re-fetch. If the Maildeno server is unreachable (network error, timeout, 5xx), the SDK:
+
+. Renders from the **last known-good cached copy** (the stale entry).
+. Sets `result.from_stale_cache = True` on the returned `RenderResult`.
+. Does **not** raise — your send pipeline continues uninterrupted during Maildeno downtime.
+
+The SDK only raises when the server is unreachable *and* no prior cached copy exists for that template (a first-ever render with an empty cache).
+
+[source,python]
+----
+result = client.render(
+    template_id="550e8400-e29b-41d4-a716-446655440000",
+    target="html",
+)
+
+if result.from_stale_cache:
+    # The output is still valid — rendered from the last cached template.
+    logger.warning(
+        "Rendered from stale cache — Maildeno may be unreachable",
+        extra={"template_id": result.template_id},
+    )
+----
+
+NOTE: `from_stale_cache` is only available on the `RenderResult` returned by `render()`. The convenience methods (`render_html()`, `render_react()`, `render_mjml()`) return the output string directly, so use `render()` when you need to detect a stale render.
+
+== Cache inspection {amp} management
+
+[tabs]
+====
+Sync::
++
+[source,python]
+----
+# List the template IDs currently held in the cache
+ids = client.list_cached()
+# ["550e8400-...", "9ec0c043-..."]
+
+# Remove a single template immediately, bypassing TTL
+# (e.g. right after updating it on the dashboard)
+client.delete_cached("550e8400-e29b-41d4-a716-446655440000")
+
+# Wipe the entire cache (memory and disk)
+client.clear_cache()
+----
+
+Async::
++
+[source,python]
+----
+ids = await client.list_cached()
+await client.delete_cached("550e8400-e29b-41d4-a716-446655440000")
+await client.clear_cache()
+----
+====
+
+A common pattern is to call `delete_cached()` from a webhook handler so template edits propagate to your renderers immediately instead of waiting for the TTL to expire.
+
+NOTE: `invalidate(template_id)` is deprecated — use `delete_cached(template_id)` instead. The old method continues to work but will be removed in a future major version.
+
+== Choosing a strategy
+
+[.table-scroll, cols="1,1,1", options=header]
+|===
+|Deployment|Strategy|Why
+
+|Long-lived web server / worker
+|`memory`
+|Simplest, fastest. Cache stays warm for the process lifetime.
+
+|Serverless (Lambda, Cloud Run)
+|`disk` (on a mounted volume) or `memory`
+|Disk survives cold starts; memory is fine if cold starts are rare.
+
+|Multi-worker (Gunicorn, uWSGI)
+|`disk` on a shared path
+|All workers share one fetched copy instead of each fetching independently.
+|===
+
+== See also
+
+* xref:py-rendering.adoc[Rendering] — `render()`, convenience methods, and `RenderResult`.
+* xref:py-installation.adoc[Installation {amp} Setup] — full constructor configuration.
+* xref:rest-api.adoc[REST API] — the `GET /v1/sdk/template/{id}` endpoint the cache is built on.

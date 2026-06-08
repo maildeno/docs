@@ -173,7 +173,7 @@ const response = await fetch("/api/render-email", {
 const { html } = await response.json()
 ----
 
-Or call the Maildeno REST API directly with the `Authorization` header from a server:
+Or call the Maildeno REST API directly from a server with the `Authorization` header:
 
 [source,typescript]
 ----
@@ -196,3 +196,5 @@ const response = await fetch("https://api.maildeno.com/v1/sdk/render", {
 
 const html = await response.text()
 ----
+
+NOTE: `POST /v1/sdk/render` is deprecated as of SDK v2.0 and sends your dynamic data to Maildeno's servers. Prefer running the SDK itself in your backend handler (the first example above) — it fetches the template once, caches it, and renders in-process so dynamic data stays on your server. See xref:rest-api.adoc[REST API] and xref:js-caching.adoc[Caching].

@@ -12,11 +12,12 @@ Requires Node.js 18+ (or any runtime with native `fetch` — Bun, Deno, Cloudfla
 
 == Pages in this section
 
-* xref:js-installation.adoc[Installation & Setup]
+* xref:js-installation.adoc[Installation {amp} Setup]
 * xref:js-rendering.adoc[Rendering]
-* xref:js-dynamic-data.adoc[Dynamic Data (merge tags & context)]
+* xref:js-caching.adoc[Caching] — memory, disk, and stale-on-error fallback
+* xref:js-dynamic-data.adoc[Dynamic Data (merge tags {amp} context)]
 * xref:js-error-handling.adoc[Error Handling]
-* xref:js-environments.adoc[Environments & Frameworks]
+* xref:js-environments.adoc[Environments {amp} Frameworks]
 
 == 30-second example
 
@@ -50,10 +51,12 @@ All types are exported from the package root:
 import type {
   RenderTarget,    // "html" | "react-email" | "mjml"
   RenderOptions,   // input to client.render()
-  RenderResult,    // output from client.render()
+  RenderResult,    // output from client.render() (includes fromStaleCache?)
   DynamicData,     // { merge_tags?, context? }
   MergeTagGroup,   // { text?, url?, attr? }
   MaildenoConfig,  // constructor config
+  CacheConfig,     // { type?, path?, ttl?, maxEntries? }
+  TemplateJson,    // raw shape of GET /v1/sdk/template/{id}
   SdkErrorCode,    // union of error code strings
   ValidationIssue, // issue on err.issues
 } from "maildeno"

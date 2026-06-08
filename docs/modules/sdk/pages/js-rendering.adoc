@@ -88,7 +88,13 @@ console.log(result.templateId)  // "550e8400-..."
 |`templateId`
 |`string`
 |The template UUID that was rendered.
+
+|`fromStaleCache`
+|`boolean \| undefined`
+|`true` when the template was rendered from a stale cache entry because the Maildeno server was unreachable. Absent/`false` on a normal render.
 |===
+
+NOTE: `fromStaleCache` is only available on the object returned by `render()` — the convenience methods resolve to the output string directly. See xref:js-caching.adoc[Caching] for how the cache and stale-on-error fallback work.
 
 == Choosing a target dynamically
 

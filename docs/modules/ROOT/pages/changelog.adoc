@@ -1,9 +1,71 @@
 = Changelog
 :description: Release history for Maildeno and its SDKs.
 
-All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning].
+All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The JavaScript/TypeScript and Python SDKs are versioned independently — the JS SDK is currently at **v2.1.0** and the Python SDK at **v2.0.0**.
 
-== 2025-01-06 — SDK v1.0.0
+== JavaScript / TypeScript SDK v2.1.0 — 2026-06-07
+
+=== Added
+
+* Disk cache strategy — set `cache: { type: "disk", path: "..." }` to persist template JSON to the local filesystem. Disk-cached entries survive process restarts and are shared across workers on the same filesystem.
+* Unified `cache` config object — `type`, `path`, `ttl`, and `maxEntries` now live under a single `cache` key.
+* `client.listCached()` — returns the IDs of all templates currently in the cache.
+* `client.deleteCached(templateId)` — removes a single template from the cache. Replaces `invalidate()`.
+* `CacheConfig` type exported from the package root.
+
+=== Changed
+
+* `client.clearCache()` is now async (was sync). Awaiting it is required in disk mode; memory mode resolves immediately, so existing code that does not `await` still works in practice.
+* `client.invalidate(templateId)` is now async and deprecated — it delegates to `deleteCached()` internally, so existing code keeps working.
+
+=== Removed — breaking
+
+* `cacheTtl` top-level config option — moved into `cache.ttl`.
+* `cacheMaxEntries` top-level config option — moved into `cache.maxEntries`.
+
+See xref:sdk:js-caching.adoc[JS Caching] for the full caching reference.
+
+== Python SDK v2.0.0 — 2026-06-07
+
+=== Changed — breaking
+
+* Rendering is now local. The SDK fetches template JSON once via `GET /v1/sdk/template/{id}` and renders in-process using the embedded Wasm engine. Your merge tags {amp} visibility context never leave your server.
+* `POST /v1/sdk/render` is no longer called. Existing direct-HTTP integrations keep working until the endpoint is removed (see the `Deprecation` response header).
+* `RenderResult` gains an optional `from_stale_cache: bool = False` field. Code that reads `.output`, `.target`, or `.template_id` is unaffected.
+* `invalidate(template_id)` is deprecated — use `delete_cached(template_id)`.
+
+=== Added
+
+* `wasmtime` runtime dependency — the Wasm engine that runs the embedded renderer (Linux, macOS, and Windows on Python 3.9+).
+* `engine.wasm` shipped inside the `maildeno` package, located via `importlib.resources` (works in wheels, editable installs, virtualenvs, Lambda layers, and Docker).
+* In-process template cache — template JSON is cached after the first fetch; subsequent renders to the same `template_id` have zero network overhead.
+* Stale-on-error fallback — if the TTL expires and the server is unreachable, the SDK renders from the last known-good cached copy and sets `result.from_stale_cache = True` rather than raising.
+* `cache=` constructor parameter — memory (default) or disk.
+* `list_cached()`, `delete_cached(template_id)`, and `clear_cache()` cache-management methods.
+* `CacheConfig` and `TemplateJson` TypedDicts exported from the package root.
+* Thread-safe Wasm singleton — loaded lazily on the first render and reused for the process lifetime, with a lock for exactly-once initialisation.
+* Async Wasm via thread executor — `AsyncMaildenoClient` dispatches renders to asyncio's default thread-pool executor so the event loop is never blocked.
+
+See xref:sdk:py-caching.adoc[Python Caching] for the full caching reference.
+
+== JavaScript / TypeScript SDK v2.0.0 — 2026-06-05
+
+=== Changed — breaking
+
+* Rendering is now local. The SDK fetches template JSON once via `GET /v1/sdk/template/{id}` and renders in-process using the embedded engine. Your merge tags {amp} visibility context never leave your server.
+* `RenderResult` gains an optional `fromStaleCache?: boolean` field. Code that destructures `{ templateId, target, output }` is unaffected.
+* `POST /v1/sdk/render` is deprecated and no longer called by the SDK. Existing direct-HTTP integrations keep working until the endpoint is removed (see the `Deprecation` response header).
+
+=== Added
+
+* In-process template cache — subsequent calls to the same `templateId` render with zero network overhead.
+* Stale-on-error fallback — renders from the last known-good cached copy and sets `result.fromStaleCache = true` when the server is unreachable.
+* `cacheTtl` and `cacheMaxEntries` config options (both deprecated in v2.1 — use the `cache` object).
+* `client.invalidate(templateId)` and `client.clearCache()` (`invalidate()` deprecated in v2.1 — use `deleteCached()`).
+* Output minification.
+* `TemplateJson` type exported from the package root.
+
+== SDK v1.0.0 — 2026-05-29
 
 === JavaScript / TypeScript SDK
 

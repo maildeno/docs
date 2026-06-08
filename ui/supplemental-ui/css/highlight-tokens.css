@@ -1,0 +1,112 @@
+/* =========================================================
+   highlight-tokens.css  —  Syntax highlighting token colours
+   Palette: Catppuccin Mocha
+   Light-mode code bg : #1e1e2e  (--color-code-bg, Mocha Base)
+   Dark-mode code bg  : #0d1117  (--color-code-bg in dark theme)
+   Both use text      : #cdd6f4  (--color-code-text, Mocha Text)
+
+   No hljs CSS theme is loaded — this file owns all token colours
+   so the result stays consistent with your existing code-block
+   background and never conflicts with site.css.
+   ========================================================= */
+
+/* ── Base ──────────────────────────────────────────────────
+   display:block makes <code> fill the <pre> properly.
+   background:transparent and color:inherit let the <pre>'s
+   --color-code-bg and --color-code-text show through,
+   including the dark-mode override (#0d1117).
+   ──────────────────────────────────────────────────────── */
+pre code.hljs {
+  display: block;
+  overflow-x: auto;
+  background: transparent;
+  color: inherit;
+  padding: 0; /* <pre> in site.css already handles padding */
+}
+
+/* ── Comments — Overlay 0, italic ─────────────────────── */
+.hljs-comment,
+.hljs-quote { color: #6c7086; font-style: italic; }
+
+/* ── Keywords — Mauve ──────────────────────────────────── */
+/* const, function, class, import, export, return, if, for,
+   await, async, def, lambda, from, with, as, not, in, is,
+   yield, pass, raise, try, except, finally, del, global    */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-meta .hljs-keyword { color: #cba6f7; }
+
+/* ── Literals — true / false / null / None — Peach ─────── */
+.hljs-literal { color: #fab387; }
+
+/* ── Strings — Green ───────────────────────────────────── */
+.hljs-string,
+.hljs-template-literal,
+.hljs-addition { color: #a6e3a1; }
+
+/* String interpolation body (${...}) — keep as Text */
+.hljs-subst { color: #cdd6f4; }
+
+/* ── Numbers & RegExps — Peach ─────────────────────────── */
+.hljs-number,
+.hljs-regexp { color: #fab387; }
+
+/* ── Built-in globals & types — Sky ───────────────────── */
+/* console, Error, Math, Array, print, len, dict, list,
+   str, int, bool, Promise, TypeScript built-in types       */
+.hljs-built_in,
+.hljs-type { color: #89dceb; }
+
+/* ── Function names — Blue ─────────────────────────────── */
+/* Covers both function definitions and call-site detection */
+.hljs-title,
+.hljs-title.function_,
+.hljs-title.function_.invoke__ { color: #89b4fa; }
+
+/* ── Class names — Yellow ──────────────────────────────── */
+.hljs-title.class_,
+.hljs-class .hljs-title { color: #f9e2af; }
+
+/* ── Parameters — Text (default, no extra colour) ──────── */
+.hljs-params { color: #cdd6f4; }
+
+/* ── Attributes / properties / JSON keys — Blue ────────── */
+.hljs-attr,
+.hljs-attribute,
+.hljs-property { color: #89b4fa; }
+
+/* ── HTML / XML tags ───────────────────────────────────── */
+.hljs-tag { color: #cdd6f4; }           /* angle brackets */
+.hljs-tag .hljs-name  { color: #f38ba8; } /* tag name — Red */
+.hljs-tag .hljs-attr  { color: #89b4fa; } /* attribute name */
+
+/* ── Decorators / meta (@decorator, #![...]) — Peach ───── */
+.hljs-meta { color: #fab387; }
+.hljs-meta .hljs-string { color: #a6e3a1; }
+
+/* ── Operators — Sky ───────────────────────────────────── */
+.hljs-operator { color: #89dceb; }
+
+/* ── Punctuation — Overlay 2 (subtle) ──────────────────── */
+.hljs-punctuation { color: #9399b2; }
+
+/* ── Symbols — Pink ────────────────────────────────────── */
+.hljs-symbol { color: #f5c2e7; }
+
+/* ── CSS selectors ─────────────────────────────────────── */
+.hljs-selector-class { color: #f9e2af; } /* .class  — Yellow */
+.hljs-selector-id    { color: #f38ba8; } /* #id     — Red    */
+
+/* ── Shell / bash — variable names — Mauve ─────────────── */
+.hljs-variable.language_ { color: #cba6f7; }
+
+/* ── Diff ──────────────────────────────────────────────── */
+.hljs-deletion { color: #f38ba8; } /* Red   */
+/* .hljs-addition already covered under Strings (Green)    */
+
+/* ── Markdown / AsciiDoc prose inside code blocks ──────── */
+.hljs-section  { color: #89b4fa; font-weight: 600; } /* headings */
+.hljs-bullet   { color: #cba6f7; }
+.hljs-link     { color: #89b4fa; text-decoration: underline; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong   { font-weight: 600; }

@@ -33,8 +33,8 @@ asciidoc:
     experimental: ''
     source-highlighter: highlight.js
     # SDK versions — bump here on release
-    js-sdk-version: '1.0.0'
-    py-sdk-version: '1.0.0'
+    js-sdk-version: '2.1.0'
+    py-sdk-version: '2.0.0'
     api-base-url: 'https://api.maildeno.com'
     dashboard-url: 'https://maildeno.com/login'
     support-email: 'support@maildeno.com'

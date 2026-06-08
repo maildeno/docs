@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{#if page.title}}{{page.title}} :: {{/if}}{{site.title}}</title>
+  {{#if page.attributes.description}}<meta name="description" content="{{page.attributes.description}}">{{/if}}
+  <!-- Theme: apply before first paint to prevent flash -->
+  <script>
+    (function(){
+      var s=localStorage.getItem('maildeno-theme');
+      var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if(s==='dark'||(s!=='light'&&prefersDark)){document.documentElement.setAttribute('data-theme','maildeno_doc_v1');}
+    })();
+  </script>
+  <link rel="preconnect" href="https://api.fontshare.com">
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{{uiRootPath}}}/css/site.css">
+  <link rel="stylesheet" href="{{{uiRootPath}}}/css/highlight-tokens.css">
+</head>
+<body>
+
+  <!-- ═══════════════════════════ TOP NAV ═══════════════════════════ -->
+  <header class="topnav" id="topnav">
+    <div class="topnav__inner">
+      <div class="topnav__left">
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="sidebar">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path class="bar bar-top"    d="M3 5h14" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+            <path class="bar bar-mid"   d="M3 10h14" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+            <path class="bar bar-bot"   d="M3 15h14" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <a href="{{siteRootPath}}" class="topnav__logo">
+          <span class="topnav__logo-mark">md</span>
+          <span class="topnav__logo-text">{{site.title}}</span>
+        </a>
+      </div>
+      <nav class="topnav__links" aria-label="Site links">
+        <a href="{{relativize '/'}}">Docs</a>
+        <a href="{{relativize '/builder/overview.html'}}">Builder</a>
+        <a href="{{relativize '/sdk/overview.html'}}">SDK</a>
+      </nav>
+      <div class="topnav__right">
+        <!-- Theme toggle: sun/moon — managed by site.js -->
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <!-- Sun icon (shown in dark mode) -->
+          <span class="icon-sun" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+            </svg>
+          </span>
+          <!-- Moon icon (shown in light mode) -->
+          <span class="icon-moon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+            </svg>
+          </span>
+        </button>
+        <a href="https://maildeno.com" class="btn btn--sm btn--primary" target="_blank" rel="noopener">Get started →</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════ SIDEBAR OVERLAY ═══════════════════════════ -->
+  <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+  <!-- ═══════════════════════════ LAYOUT SHELL ═══════════════════════════ -->
+  <div class="layout">
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar" id="sidebar" aria-label="Navigation">
+      <div class="sidebar__inner">
+        <div class="sidebar__search">
+          <svg class="sidebar__search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M10.5 10.5L13 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <input type="search" class="sidebar__search-input" placeholder="Search docs…" aria-label="Search documentation" id="docsSearch">
+        </div>
+        <nav class="nav" id="nav" aria-label="Documentation navigation">
+          {{> navigation}}
+        </nav>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main" id="main">
+      <div class="main__inner">
+
+        <!-- Breadcrumbs -->
+        {{#if page.breadcrumbs}}
+        <nav class="breadcrumbs" aria-label="Breadcrumbs">
+          <ol>
+            {{#each page.breadcrumbs}}
+            <li{{#if this.current}} aria-current="page"{{/if}}>
+              {{#unless this.current}}<a href="{{this.url}}">{{this.content}}</a>{{else}}<span>{{this.content}}</span>{{/unless}}
+            </li>
+            {{/each}}
+          </ol>
+        </nav>
+        {{/if}}
+
+        <!-- Article -->
+        <article class="article" id="article">
+          {{{page.contents}}}
+        </article>
+
+        <!-- Prev / Next page navigation -->
+        {{#if page.previous}}{{#if page.next}}
+        <nav class="pagination" aria-label="Pagination">
+          {{#if page.previous}}
+          <a class="pagination__item pagination__item--prev" href="{{page.previous.url}}">
+            <span class="pagination__label">← Previous</span>
+            <span class="pagination__title">{{{page.previous.content}}}</span>
+          </a>
+          {{/if}}
+          {{#if page.next}}
+          <a class="pagination__item pagination__item--next" href="{{page.next.url}}">
+            <span class="pagination__label">Next →</span>
+            <span class="pagination__title">{{{page.next.content}}}</span>
+          </a>
+          {{/if}}
+        </nav>
+        {{/if}}{{/if}}
+
+      </div>
+    </main>
+
+    <!-- RIGHT: ON THIS PAGE -->
+    <aside class="toc" id="toc" aria-label="On this page">
+      <div class="toc__inner">
+        <p class="toc__heading">On this page</p>
+        <nav id="tocNav" aria-label="Table of contents"></nav>
+        <div class="toc__divider"></div>
+        <div class="toc__links">
+          <a href="https://github.com/maildeno/docs/issues" target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1C4.13 1 1 4.13 1 8c0 3.09 2.005 5.715 4.785 6.635.35.065.48-.15.48-.335 0-.165-.005-.6-.01-1.18-1.945.425-2.355-.94-2.355-.94-.32-.81-.78-1.025-.78-1.025-.635-.435.05-.425.05-.425.705.05 1.075.725 1.075.725.625 1.07 1.64.76 2.04.58.065-.45.245-.76.445-.935-1.555-.175-3.19-.775-3.19-3.455 0-.765.275-1.39.72-1.88-.07-.18-.31-.89.07-1.855 0 0 .585-.19 1.92.715A6.7 6.7 0 018 4.83c.595 0 1.19.08 1.75.235 1.33-.905 1.915-.715 1.915-.715.38.965.14 1.675.07 1.855.45.49.72 1.115.72 1.88 0 2.685-1.64 3.275-3.2 3.45.25.215.475.64.475 1.29 0 .935-.01 1.685-.01 1.91 0 .185.125.405.485.335A7.003 7.003 0 0015 8c0-3.87-3.13-7-7-7z" fill="currentColor"/></svg>
+            Edit on GitHub
+          </a>
+          <a href="https://github.com/maildeno/docs/issues/new" target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v3.5M8 11v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Report an issue
+          </a>
+        </div>
+      </div>
+    </aside>
+
+  </div><!-- /.layout -->
+
+  <script src="{{{uiRootPath}}}/js/site.js"></script>
+  <!-- Syntax highlighting ─────────────────────────────────────────────────
+       highlight.min.js (all languages, incl. TypeScript) loaded from cdnjs.
+       No hljs CSS theme — token colours live in css/highlight-tokens.css,
+       matched to your Catppuccin Mocha palette.
+  ──────────────────────────────────────────────────────────────────────── -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

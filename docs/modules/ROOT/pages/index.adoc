@@ -35,7 +35,7 @@ Maildeno is a two-part product:
 
 * **Email Builder** — A visual drag-and-drop editor for designing responsive email templates. Teams can manage layouts, merge tags, visibility rules, and export targets all from the dashboard — no code required.
 
-* **Render API & SDKs** — A REST API (with official JavaScript/TypeScript and Python SDKs) that takes a template ID plus optional dynamic data and returns a fully rendered HTML, React Email, or MJML string ready to pipe into any email-sending service.
+* **Render API & SDKs** — Fetch a template's JSON structure via our REST API. Then the SDK's embedded WebAssembly engine takes that JSON, merges your dynamic data, applies visibility rules, and compiles it locally into HTML, React Email, or MJML — ready to pipe into any email-sending service. Your data stays completely local. Maildeno never sees it.
 
 
 == Key capabilities

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{#if page.title}}{{page.title}} :: {{/if}}{{site.title}}</title>
   {{#if page.attributes.description}}<meta name="description" content="{{page.attributes.description}}">{{/if}}
+  <link rel="icon" type="image/png" href="{{{uiRootPath}}}/img/favicon.png">
   <!-- Theme: apply before first paint to prevent flash -->
   <script>
     (function(){
@@ -32,8 +33,7 @@
           </svg>
         </button>
         <a href="{{siteRootPath}}" class="topnav__logo">
-          <span class="topnav__logo-mark">md</span>
-          <span class="topnav__logo-text">{{site.title}}</span>
+          <img src="{{{uiRootPath}}}/img/logo.svg" alt="Maildeno Logo" style="width: 115px;">
         </a>
       </div>
       <nav class="topnav__links" aria-label="Site links">

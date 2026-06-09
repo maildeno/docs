@@ -79,24 +79,37 @@ See xref:sdk:api-keys.adoc[API Key Scopes] for creation and management details.
 
 [source]
 ----
-Your app                    Maildeno Render API
-─────────                   ───────────────────
-  │                                  │
-  │                                  │
-  │  {                               │
-  │    template_id: "...",           │
-  │    target: "html",               │
-  │    dynamic_data: {               │
-  │      merge_tags: { ... },        │
-  │      context: { ... }            │
-  │    }                             │
-  │  }                    ──────────►│
-  │                                  │  1. Validate API key + scope
-  │                                  │  2. Fetch template
-  │                                  │  3. Evaluate visibility rules
-  │                                  │  4. Replace merge tags
-  │                                  │  5. Render to target format
-  │  200 OK                          │
-  │  <!DOCTYPE html>...  ◄──────────-│
-  │                                  │
+Your server                         Maildeno API
+───────────                         ────────────
+     │                                   │
+     │  ── First call ─────────────────  │
+     │                                   │
+     │  GET /v1/sdk/template/{id}        │
+     │ ─────────────────────────────────►│
+     │                                   │  validate key
+     │                                   │  fetch template JSON
+     │  200  { template JSON }           │
+     │ ◄─────────────────────────────────│
+     │                                   │
+     │  ┌─ cache template ─────────────┐ │
+     │  │  stored for future calls     │ │
+     │  └──────────────────────────────┘ │
+     │                                   │
+     │  ┌─ Wasm renders locally ───────┐ │
+     │  │  merge_tags + context        │ │
+     │  │  applied here, never sent    │ │
+     │  └──────────────────────────────┘ │
+     │                                   │
+     │  HTML / React Email / MJML        │
+     │  (returned to your code)          │
+     │                                   │
+     │  ── Subsequent calls ───────────  │
+     │                                   │
+     │  ┌─ cache hit ──────────────────┐ │
+     │  │  Wasm renders — zero network │ │
+     │  └──────────────────────────────┘ │
+     │                                   │
+     │  HTML / React Email / MJML        │
+     │  (returned to your code)          │
+     │                                   │
 ----

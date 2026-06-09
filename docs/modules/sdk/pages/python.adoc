@@ -28,10 +28,8 @@ Requires Python 3.9+ and `httpx >= 0.28.1`.
 
 == 30-second example
 
-[tabs]
 ====
-Sync::
-+
+Sync
 [source,python]
 ----
 import os
@@ -50,8 +48,7 @@ html = client.render_html("550e8400-e29b-41d4-a716-446655440000", {
 print(html)  # <!DOCTYPE html>...
 ----
 
-Async::
-+
+Async
 [source,python]
 ----
 import asyncio

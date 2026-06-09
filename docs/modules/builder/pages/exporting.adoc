@@ -28,11 +28,8 @@ Multiple export formats on a single template design: **HTML**, **React Email** a
 
 == Choosing a target
 
-[tabs]
 ====
-JavaScript::
-+
---
+JavaScript
 [source,typescript]
 ----
 // HTML (default)
@@ -53,13 +50,12 @@ const result = await client.render({
 console.log(result.output)
 console.log(result.target)      // "react-email"
 console.log(result.templateId)  // "550e8400-..."
-----
-  `"html" | "react-email" | "mjml"`
---
 
-Python::
-+
---
+`"html" | "react-email" | "mjml"`
+----
+
+
+Python
 [source,python]
 ----
 # HTML (default)
@@ -80,9 +76,10 @@ result = client.render(
 print(result.output)
 print(result.target)       # "react-email"
 print(result.template_id)  # "550e8400-..."
+
+`"html"`, `"react-email"`, or `"mjml"`
 ----
-  `"html"`, `"react-email"`, or `"mjml"`
---
+
 ====
 
 

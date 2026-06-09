@@ -5,10 +5,8 @@
 
 The fastest path to rendered output. Each method returns the output string directly.
 
-[tabs]
 ====
-Sync::
-+
+Sync
 [source,python]
 ----
 html = client.render_html("template-id")
@@ -16,8 +14,7 @@ tsx  = client.render_react("template-id")
 mjml = client.render_mjml("template-id")
 ----
 
-Async::
-+
+Async
 [source,python]
 ----
 html = await client.render_html("template-id")
@@ -40,10 +37,8 @@ html = client.render_html("template-id", {
 
 Use `render()` when you need the full result object or want to specify the target dynamically.
 
-[tabs]
 ====
-Sync::
-+
+Sync
 [source,python]
 ----
 result = client.render(
@@ -60,8 +55,7 @@ print(result.target)       # "html"
 print(result.template_id)  # "550e8400-..."
 ----
 
-Async::
-+
+Async
 [source,python]
 ----
 result = await client.render(

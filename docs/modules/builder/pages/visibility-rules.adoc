@@ -119,10 +119,8 @@ Date operators expect ISO-8601 date values (for example, `2026-01-01`).
 
 == Passing context at render time
 
-[tabs]
 ====
-JavaScript::
-+
+JavaScript
 [source,typescript]
 ----
 await client.renderHtml("template-id", {
@@ -136,8 +134,7 @@ await client.renderHtml("template-id", {
 })
 ----
 
-Python::
-+
+Python
 [source,python]
 ----
 client.render_html("template-id", {
@@ -151,8 +148,7 @@ client.render_html("template-id", {
 })
 ----
 
-REST API::
-+
+REST API
 [source,json]
 ----
 {

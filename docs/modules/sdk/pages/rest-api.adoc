@@ -20,14 +20,34 @@ Authorization: Bearer sk_live_your_api_key
 
 == Endpoints
 
+=== `GET /v1/sdk/template/{id}`
+
+Fetch a template's JSON definition and render it locally using the SDK's WASM engine. Merge tags and context never leave your server.
+
+==== Request
+
+[source]
+----
+GET /v1/sdk/template/550e8400-e29b-41d4-a716-446655440000
+Authorization: Bearer <API_KEY>
+----
+
+==== Response — 200 OK
+
+Returns the template's JSON definition — the `TemplateJson` payload the SDKs cache and render locally via the WASM engine. Treat the body as opaque unless you are building your own renderer against the exported `TemplateJson` type.
+
+==== Error responses
+
+Same `code` values as the render endpoint: `401 INVALID_API_KEY`, `403 FORBIDDEN`, `404 TEMPLATE_NOT_FOUND`. See xref:error-codes.adoc[Error Codes].
+
 === `POST /v1/sdk/render`
 
 [IMPORTANT]
 ====
-As of SDK v2.0 this endpoint is **deprecated**. The official SDKs no longer call it — they fetch template JSON via `GET /v1/sdk/template/{id}` and render in-process, so dynamic data never leaves your server. The endpoint still works for existing direct-HTTP integrations until it is removed; check the `Deprecation` response header for the sunset date. New direct-HTTP integrations should prefer the template endpoint below, or use an SDK.
+This endpoint is **deprecated**. The official SDKs no longer call it — they fetch template JSON via `GET /v1/sdk/template/{id}` and render in-process using the WASM engine, so dynamic data never leaves your server. The endpoint still works for existing direct-HTTP integrations until it is removed; check the `Deprecation` response header for the sunset date. New integrations should use `GET /v1/sdk/template/{id}` with an SDK instead.
 ====
 
-Render a template and return the output string. The request body's `dynamic_data` is sent to and processed by the Maildeno server.
+Render a template server-side and return the output string. The request body's `dynamic_data` is sent to and processed by the Maildeno server.
 
 ==== Request
 
@@ -129,31 +149,18 @@ The response body is the raw rendered string (not JSON-wrapped):
 }
 ----
 
-=== `GET /v1/sdk/template/{id}`
-
-Fetch a template's JSON definition. This is the endpoint the official SDKs use: they fetch the template once, cache it, and render in-process. Merge tags and context are never sent to Maildeno.
-
-==== Request
-
-[source]
-----
-GET /v1/sdk/template/550e8400-e29b-41d4-a716-446655440000
-Authorization: Bearer <API_KEY>
-----
-
-==== Response — 200 OK
-
-Returns the template's JSON definition — the `TemplateJson` payload the SDKs cache and render locally. Its internal structure is an implementation detail of the rendering engine; treat the body as opaque unless you are building your own renderer against the exported `TemplateJson` type.
-
-==== Error responses
-
-Same `code` values as the render endpoint: `401 INVALID_API_KEY`, `403 FORBIDDEN`, `404 TEMPLATE_NOT_FOUND`. See xref:error-codes.adoc[Error Codes].
-
 == `curl` examples
 
 [source,bash]
 ----
-# Minimal — HTML, no dynamic data
+# Fetch template JSON for local rendering
+curl https://api.maildeno.com/v1/sdk/template/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer $MAILDENO_API_KEY"
+----
+
+[source,bash]
+----
+# Deprecated — render server-side (minimal)
 curl -X POST https://api.maildeno.com/v1/sdk/render \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $MAILDENO_API_KEY" \
@@ -162,7 +169,7 @@ curl -X POST https://api.maildeno.com/v1/sdk/render \
 
 [source,bash]
 ----
-# Full request with merge tags and context
+# Deprecated — render server-side (full request with merge tags and context)
 curl -X POST https://api.maildeno.com/v1/sdk/render \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $MAILDENO_API_KEY" \

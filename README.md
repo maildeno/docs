@@ -51,6 +51,9 @@ maildeno-docs/
 │
 └── ui/
     └── supplemental-ui/
+        ├── css          
+        ├── img 
+        ├── layouts           
         ├── _redirects           # Cloudflare Pages URL redirects
         └── _headers             # HTTP security headers
 ```

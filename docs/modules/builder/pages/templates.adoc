@@ -63,19 +63,23 @@ Apply tags to templates from the template library to keep large collections mana
 
 == Template limits
 
-[.table-scroll, cols="1,1", options=header]
+[.table-scroll, cols="1,1,1", options=header]
 |===
-|Plan|Template limit
+|Plan|Template limit|Saved Rows (Modules)
 
 |Free
 |3 templates
+|8
 
 |Standard
 |Unlimited
+|40
 
 |Pro
 |Unlimited
+|Unlimited
 
 // |Enterprise
+// |Unlimited
 // |Unlimited
 |===

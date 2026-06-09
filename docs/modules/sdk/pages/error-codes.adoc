@@ -44,10 +44,8 @@ All errors from the Maildeno SDKs and REST API use a consistent `code` field for
 
 When `code` is `RENDER_ERROR` and the cause is invalid input, the `issues` array provides field-level detail:
 
-[tabs]
 ====
-JavaScript::
-+
+JavaScript
 [source,typescript]
 ----
 try {
@@ -62,8 +60,7 @@ try {
 // body.template_id — Input should be a valid UUID, ...
 ----
 
-Python::
-+
+Python
 [source,python]
 ----
 try:

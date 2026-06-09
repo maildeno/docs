@@ -34,14 +34,12 @@ WARNING: Never commit API keys to source control. Use environment variables or a
 [tabs]
 ====
 JavaScript / TypeScript::
-+
 [source,bash]
 ----
 npm install maildeno
 ----
 
 Python::
-+
 [source,bash]
 ----
 pip install maildeno
@@ -54,59 +52,59 @@ Replace `<YOUR_API_KEY>` and `<YOUR_TEMPLATE_ID>` with your actual values.
 
 [tabs]
 ====
-JavaScript / TypeScript::
-+
+* JavaScript / TypeScript
 --
 [source,typescript]
 ----
 import { MaildenoClient } from "maildeno"
 
 const client = new MaildenoClient({
-  apiKey: process.env.MAILDENO_API_KEY!, 
+  apiKey: process.env.MAILDENO_API_KEY!,
 })
 
 const html = await client.renderHtml(
   "<YOUR_TEMPLATE_ID>",
   {
     merge_tags: {
-      text: { name: "Noruwa" }, 
+      text: { name: "Noruwa" },
     },
   }
 )
 
 console.log(html) // <!DOCTYPE html>...
 ----
-  Load your API key from an environment variable — never hard-code it.
-  The `name` merge tag fills in the `{{ name }}` placeholder in your template.
+
+NOTE: Load your API key from an environment variable — never hard-code it.
+The `name` merge tag fills in the `{{ name }}` placeholder in your template.
 --
 
-Python (sync)::
-+
+* Python (sync)
 --
 [source,python]
 ----
 import os
 from maildeno import MaildenoClient
 
-client = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"])  
+client = MaildenoClient(api_key=os.environ["MAILDENO_API_KEY"])
 
 html = client.render_html(
     "<YOUR_TEMPLATE_ID>",
     {
         "merge_tags": {
-            "text": {"name": "Noruwa"},  
+            "text": {"name": "Noruwa"},
         },
     },
 )
 
 print(html)  # <!DOCTYPE html>...
 ----
-  Load your API key from an environment variable.
-  Fills in the `{{ name }}` merge tag.
+
+NOTE: Load your API key from an environment variable.
+The `name` merge tag fills in the `{{ name }}` merge tag.
 --
 
-Python (async)::
-+
+* Python (async)
+--
 [source,python]
 ----
 import asyncio
@@ -123,6 +121,7 @@ async def main():
 
 asyncio.run(main())
 ----
+--
 ====
 
 You should see a complete HTML document printed to stdout. 🎉

@@ -81,7 +81,6 @@ await client.renderHtml("template-id", {
     plan:         "pro",          // string
     country:      "usa",          // string
     age:          25,             // number
-    is_verified:  true,           // boolean
     country_rank: "2",            // number-as-string is also fine
   },
 })

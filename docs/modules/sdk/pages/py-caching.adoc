@@ -155,10 +155,7 @@ NOTE: `from_stale_cache` is only available on the `RenderResult` returned by `re
 
 == Cache inspection {amp} management
 
-[tabs]
 ====
-Sync::
-+
 [source,python]
 ----
 # List the template IDs currently held in the cache
@@ -173,8 +170,7 @@ client.delete_cached("550e8400-e29b-41d4-a716-446655440000")
 client.clear_cache()
 ----
 
-Async::
-+
+Async
 [source,python]
 ----
 ids = await client.list_cached()

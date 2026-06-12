@@ -1,7 +1,21 @@
 = Changelog
 :description: Release history for Maildeno and its SDKs.
 
-All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The JavaScript/TypeScript and Python SDKs are versioned independently — the JS SDK is currently at **v2.1.0** and the Python SDK at **v2.0.0**.
+All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The JavaScript/TypeScript and Python SDKs are versioned independently — the JS SDK is currently at **v2.1.1** and the Python SDK at **v2.0.1**.
+
+== JavaScript / TypeScript SDK v2.1.1 — 2026-06-12
+
+=== Fixed
+
+* Visibility context now handles non-string values. Context passed as a number or boolean (e.g. `context: { premium: true }`, `context: { tier: 2 }`) was read as empty, so visibility rules comparing against it never matched and the affected rows were always hidden. Numbers and booleans are now coerced for comparison — `2` matches `"2"`, `true` matches `"true"`. String context was unaffected.
+* Visibility context keys are now matched case-insensitively. Capitalized or camelCase keys (e.g. `Premium`, `orderCount`) previously failed to resolve. The rule `tag` must still match the context key _name_ — `isPremium` and `premium` remain distinct.
+
+== Python SDK v2.0.1 — 2026-06-12
+
+=== Fixed
+
+* Visibility context now handles non-string values. Context passed as a number or boolean (e.g. `context={"premium": True}`, `context={"tier": 2}`) was read as empty, so visibility rules comparing against it never matched and the affected rows were always hidden. Numbers and booleans are now coerced for comparison — `2` matches `"2"`, `True` matches `"true"`. String context was unaffected.
+* Visibility context keys are now matched case-insensitively. Capitalized or camelCase keys (e.g. `Premium`, `orderCount`) previously failed to resolve. The rule `tag` must still match the context key _name_ — `isPremium` and `premium` remain distinct.
 
 == JavaScript / TypeScript SDK v2.1.0 — 2026-06-07
 

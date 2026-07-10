@@ -1,7 +1,41 @@
 = Changelog
 :description: Release history for Maildeno and its SDKs.
 
-All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The JavaScript/TypeScript and Python SDKs are versioned independently — the JS SDK is currently at **v2.1.1** and the Python SDK at **v2.0.1**.
+All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The JavaScript/TypeScript and Python SDKs are versioned independently — the JS SDK is currently at **v2.1.3** and the Python SDK at **v2.0.3**.
+
+== JavaScript / TypeScript SDK v2.1.3 — 2026-07-10
+
+=== Changed
+
+**Updated the embedded WebAssembly rendering engine.** The SDK now ships with the latest `engine.wasm`, incorporating rendering improvements and internal engine refinements while maintaining API compatibility.
+
+=== Internal
+
+**Aligned the SDK with the unified Maildeno rendering engine build system.** The rendering engine is now produced from the same cross-platform build pipeline used across Maildeno SDKs, ensuring consistent rendering behaviour between WebAssembly and native runtimes.
+
+== Python SDK v2.0.3 — 2026-07-10
+
+=== Changed
+
+**Updated the embedded WebAssembly rendering engine.** The SDK now ships with the latest `engine.wasm`, incorporating rendering improvements and internal engine refinements while maintaining API compatibility.
+
+=== Internal
+
+**Aligned the SDK with the unified Maildeno rendering engine build system.** The rendering engine is now produced from the same cross-platform build pipeline used across Maildeno SDKs, ensuring consistent rendering behaviour between WebAssembly and native runtimes.
+
+== JavaScript / TypeScript SDK v2.1.2 — 2026-06-21
+
+=== Fixed
+**Menu component spacing corrected for mobile screens.** Left, right, and bottom margins were misaligned on small viewports. Margins are now consistent across breakpoints.
+
+**Preheader spacer sequence added for HTML and MJML templates.** Preheader text lacked the invisible-character padding sequence needed to prevent email clients from pulling in unwanted body text as preview copy. The standard spacer string (`&#847; &zwnj; &nbsp;` × 7) is now included after the preheader content in both plain HTML and MJML output.
+
+== Python SDK v2.0.2 — 2026-06-21
+
+=== Fixed
+**Menu component spacing corrected for mobile screens.** Left, right, and bottom margins were misaligned on small viewports. Margins are now consistent across breakpoints.
+
+**Preheader spacer sequence added for HTML and MJML templates.** Preheader text lacked the invisible-character padding sequence needed to prevent email clients from pulling in unwanted body text as preview copy. The standard spacer string (`&#847; &zwnj; &nbsp;` × 7) is now included after the preheader content in both plain HTML and MJML output.
 
 == JavaScript / TypeScript SDK v2.1.1 — 2026-06-12
 

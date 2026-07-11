@@ -6,7 +6,7 @@ This guide walks you from creating a template in the Maildeno builder to renderi
 == Prerequisites
 
 * A {dashboard-url}[Maildeno account] (free tier available)
-* Node.js ≥ 18 **or** Python ≥ 3.9 — pick whichever fits your stack
+* Node.js ≥ 18 **or** Python ≥ 3.9 **or** PHP ≥ 8.1 — pick whichever fits your stack
 
 == Step 1 — Create a template
 
@@ -37,6 +37,12 @@ JavaScript / TypeScript::
 [source,bash]
 ----
 npm install maildeno
+----
+
+PHP::
+[source,bash]
+----
+composer require maildeno/maildeno
 ----
 
 Python::
@@ -122,6 +128,32 @@ async def main():
 asyncio.run(main())
 ----
 --
+
+* PHP
+--
+[source,php]
+----
+use Maildeno\MaildenoClient;
+
+$client = new MaildenoClient([
+    'apiKey' => getenv('MAILDENO_API_KEY'),
+]);
+
+$html = $client->renderHtml(
+    '<YOUR_TEMPLATE_ID>',
+    [
+        'merge_tags' => [
+            'text' => ['name' => 'Noruwa'],
+        ],
+    ]
+);
+
+echo $html; // <!DOCTYPE html>...
+----
+
+NOTE: Load your API key from an environment variable — never hard-code it.
+The `name` merge tag fills in the `{{ name }}` placeholder in your template.
+--
 ====
 
 You should see a complete HTML document printed to stdout. 🎉
@@ -136,6 +168,7 @@ a|
 * xref:builder:exporting.adoc[Choose an export target]
 a|
 * xref:sdk:js-rendering.adoc[Full JS SDK rendering reference]
+* xref:sdk:php-rendering.adoc[Full PHP SDK rendering reference]
 * xref:sdk:py-rendering.adoc[Full Python SDK rendering reference]
 * xref:sdk:error-codes.adoc[Handle errors gracefully]
 |===

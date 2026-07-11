@@ -1,0 +1,121 @@
+= Dynamic Data
+:description: Supply merge tags and context to the Maildeno PHP SDK at render time.
+
+Dynamic data is a plain associative array passed as the second argument to any render method (or under `dynamicData` in the `render()` options array).
+
+== Structure
+
+[source,php]
+----
+$dynamicData = [
+    'merge_tags' => [       // optional
+        'text' => [/* paragraph, heading, button text */],
+        'url'  => [/* href, src, image URLs */],
+        'attr' => [/* alt, aria-label, etc. */],
+    ],
+    'context' => [/* string|int|float|bool values */], // optional
+];
+----
+
+All fields are optional — include only what your template uses.
+
+== Merge tags
+
+=== `text` — inline content
+
+[source,php]
+----
+$client->renderHtml('template-id', [
+    'merge_tags' => [
+        'text' => [
+            'name'       => 'Noruwa',
+            'company'    => 'Maildeno',
+            'reset_name' => 'Password',
+        ],
+    ],
+]);
+----
+
+Values are **HTML-escaped** before insertion.
+
+=== `url` — links and image sources
+
+[source,php]
+----
+$client->renderHtml('template-id', [
+    'merge_tags' => [
+        'url' => [
+            'reset_url'    => 'https://app.example.com/reset/abc123',
+            'banner_image' => 'https://cdn.example.com/banner.jpg',
+        ],
+    ],
+]);
+----
+
+Values are **URL percent-encoded** before insertion.
+
+=== `attr` — HTML attributes
+
+[source,php]
+----
+$client->renderHtml('template-id', [
+    'merge_tags' => [
+        'attr' => ['alt_text' => 'Product banner'],
+    ],
+]);
+----
+
+Values are **HTML attribute-safe** encoded.
+
+== Context
+
+[source,php]
+----
+$client->renderHtml('template-id', [
+    'context' => [
+        'plan'    => 'pro',
+        'country' => 'usa',
+        'age'     => 25,
+    ],
+]);
+----
+
+Context values drive xref:builder:visibility-rules.adoc[visibility rules] and are never rendered into content.
+
+== Full example
+
+[source,php]
+----
+$client->render([
+    'templateId'  => '550e8400-e29b-41d4-a716-446655440000',
+    'target'      => 'mjml',
+    'dynamicData' => [
+        'merge_tags' => [
+            'text' => [
+                'name'       => 'Noruwa',
+                'company'    => 'Maildeno',
+                'reset_name' => 'Password',
+            ],
+            'url' => [
+                'reset_url' => 'https://app.example.com/reset/abc123',
+            ],
+            'attr' => [
+                'alt_text' => 'Cave image',
+            ],
+        ],
+        'context' => [
+            'country'      => 'usa',
+            'country_rank' => '2',
+            'expiry'       => '2028',
+        ],
+    ],
+]);
+----
+
+== Missing and extra values
+
+* A merge tag in the template with no supplied value renders as an empty string.
+* A supplied value for a tag not present in the template is silently ignored.
+* Context keys not matched by any visibility rule are silently ignored.
+
+These rules live in the `maildeno-engine` renderer itself, so they're identical whether it's running as the JS/Python SDKs' embedded Wasm module or as PHP's native subprocess. See xref:builder:merge-tags.adoc[Merge Tags] and xref:builder:visibility-rules.adoc[Visibility Rules] for the builder-side documentation.

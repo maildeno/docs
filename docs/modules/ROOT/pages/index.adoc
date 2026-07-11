@@ -23,7 +23,7 @@ Maildeno gives product teams a drag-and-drop email editor and gives developers a
   </div>
   <div class="card">
     <p class="card-title">🔌 SDK Reference</p>
-    <p>Integrate rendering into your app with the JavaScript or Python SDK.</p>
+    <p>Integrate rendering into your app with the JavaScript, Python, or PHP SDK.</p>
     <a href="sdk/overview.html">Browse the SDK →</a>
   </div>
 </div>
@@ -35,7 +35,7 @@ Maildeno is a two-part product:
 
 * **Email Builder** — A visual drag-and-drop editor for designing responsive email templates. Teams can manage layouts, merge tags, visibility rules, and export targets all from the dashboard — no code required.
 
-* **Render API & SDKs** — Fetch a template's JSON structure via our REST API. Then the SDK's embedded WebAssembly engine takes that JSON, merges your dynamic data, applies visibility rules, and compiles it locally into HTML, React Email, or MJML — ready to pipe into any email-sending service. Your data stays completely local. Maildeno never sees it.
+* **Render API & SDKs** — Fetch a template's JSON structure via our REST API. Then the SDK's local render engine — an embedded WebAssembly module for JavaScript/Python, a bundled native binary for PHP — takes that JSON, merges your dynamic data, applies visibility rules, and compiles it locally into HTML, React Email, or MJML — ready to pipe into any email-sending service. Your data stays completely local. Maildeno never sees it.
 
 
 == Key capabilities
@@ -61,24 +61,27 @@ Maildeno is a two-part product:
 
 |Sync + async SDKs
 |Python SDK ships both `MaildenoClient` (sync) and `AsyncMaildenoClient` (asyncio).
+
+|Three official SDKs
+|JavaScript/TypeScript, Python, and PHP — first-party SDKs with matching feature sets.
 |===
 
 == Supported render targets
 
-[cols="1,2,2",options=header]
+[cols="1,1,2",options=header]
 |===
-|Target|SDK constant|Use case
+|Target|SDK value (all SDKs)|Use case
 
 |HTML
-|`"html"` / `"html"`
+|`"html"`
 |Any transactional email service (SendGrid, Postmark, SES, etc.)
 
 |React Email
-|`"react-email"` / `"react-email"`
+|`"react-email"`
 |Next.js / React-based email pipelines
 
 |MJML
-|`"mjml"` / `"mjml"`
+|`"mjml"`
 |Teams already using MJML for cross-client compatibility
 |===
 

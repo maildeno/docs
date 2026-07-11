@@ -1,0 +1,172 @@
+= Environments {amp} Frameworks
+:description: Use the Maildeno PHP SDK with Laravel, Symfony, plain PHP, and php-fpm in production.
+
+== php-fpm in production
+
+No FFI-style enablement dance. `proc_open` — what `symfony/process` uses under the hood to run `maildeno-engine` — is available by default in both the CLI and php-fpm SAPIs. The one thing worth checking on locked-down shared hosts is that `proc_open`/`proc_close` haven't been disabled via `disable_functions`.
+
+Each render spawns the binary fresh — there's no compiled-module state to amortize — so there's no strict requirement to build one client per worker the way some FFI-based setups need, though nothing stops you from doing so for consistency.
+
+The engine constructor takes an optional `timeoutSeconds` for the subprocess call (default `30`):
+
+[source,php]
+----
+use Maildeno\NativeEngine;
+
+$engine = new NativeEngine('/path/to/maildeno-engine', timeoutSeconds: 10.0);
+----
+
+IMPORTANT: Classic php-fpm tears down the request's object graph after every response — a `MaildenoClient` built fresh per request means a fresh `MemoryStore` too. Use disk caching if you want template JSON to survive across requests. See xref:php-caching.adoc[Caching].
+
+== Laravel
+
+Bind a singleton in a service provider so the client (and its cache) are shared for the lifetime of the request:
+
+[source,php]
+----
+// app/Providers/AppServiceProvider.php
+use Maildeno\MaildenoClient;
+
+public function register(): void
+{
+    $this->app->singleton(MaildenoClient::class, function () {
+        return new MaildenoClient([
+            'apiKey' => config('services.maildeno.key'),
+            'cache'  => ['type' => 'disk', 'path' => storage_path('framework/cache/maildeno')],
+        ]);
+    });
+}
+----
+
+[source,php]
+----
+// app/Http/Controllers/RenderEmailController.php
+use Maildeno\MaildenoClient;
+use Maildeno\MaildenoError;
+use Illuminate\Http\Request;
+
+class RenderEmailController extends Controller
+{
+    public function __invoke(Request $request, MaildenoClient $maildeno)
+    {
+        $data = $request->validate([
+            'template_id' => ['required', 'uuid'],
+            'name'        => ['required', 'string'],
+            'plan'        => ['required', 'string'],
+        ]);
+
+        try {
+            $html = $maildeno->renderHtml($data['template_id'], [
+                'merge_tags' => ['text' => ['name' => $data['name']]],
+                'context'    => ['plan' => $data['plan']],
+            ]);
+            return response()->json(['html' => $html]);
+        } catch (MaildenoError $e) {
+            return response()->json(
+                ['error' => $e->code, 'message' => $e->getMessage()],
+                $e->status ?: 500
+            );
+        }
+    }
+}
+----
+
+Using `storage_path()` for the disk cache keeps it writable, cleared alongside the rest of Laravel's cache, and shared by every php-fpm worker on the box.
+
+== Symfony
+
+Register the client as a service and inject it wherever you need it:
+
+[source,yaml]
+----
+# config/services.yaml
+services:
+    Maildeno\MaildenoClient:
+        arguments:
+            $config:
+                apiKey: '%env(MAILDENO_API_KEY)%'
+                cache:
+                    type: disk
+                    path: '%kernel.cache_dir%/maildeno'
+----
+
+[source,php]
+----
+// src/Controller/RenderEmailController.php
+use Maildeno\MaildenoClient;
+use Maildeno\MaildenoError;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Annotation\Route;
+
+class RenderEmailController
+{
+    #[Route('/api/render-email', methods: ['POST'])]
+    public function __invoke(Request $request, MaildenoClient $maildeno): JsonResponse
+    {
+        $body = json_decode($request->getContent(), true);
+
+        try {
+            $html = $maildeno->renderHtml($body['template_id'], [
+                'merge_tags' => ['text' => ['name' => $body['name']]],
+            ]);
+            return new JsonResponse(['html' => $html]);
+        } catch (MaildenoError $e) {
+            return new JsonResponse(
+                ['error' => $e->code, 'message' => $e->getMessage()],
+                $e->status ?: 500
+            );
+        }
+    }
+}
+----
+
+== Plain PHP
+
+[source,php]
+----
+<?php
+require 'vendor/autoload.php';
+
+use Maildeno\MaildenoClient;
+use Maildeno\MaildenoError;
+
+$maildeno = new MaildenoClient(['apiKey' => getenv('MAILDENO_API_KEY')]);
+
+$input = json_decode(file_get_contents('php://input'), true);
+
+header('Content-Type: application/json');
+
+try {
+    $html = $maildeno->renderHtml($input['template_id'], [
+        'merge_tags' => ['text' => ['name' => $input['name']]],
+    ]);
+    echo json_encode(['html' => $html]);
+} catch (MaildenoError $e) {
+    http_response_code($e->status ?: 500);
+    echo json_encode(['error' => $e->code, 'message' => $e->getMessage()]);
+}
+----
+
+== CLI scripts and cron jobs
+
+A one-off script or Artisan/Symfony console command lives for the duration of the run, so a memory cache is fine even though it won't persist to the next invocation:
+
+[source,php]
+----
+<?php
+require 'vendor/autoload.php';
+
+use Maildeno\MaildenoClient;
+
+$client = new MaildenoClient(['apiKey' => getenv('MAILDENO_API_KEY')]);
+
+foreach (getAllUsers() as $user) {
+    $html = $client->renderHtml('onboarding-template', [
+        'merge_tags' => ['text' => ['name' => $user->name]],
+    ]);
+    sendEmail($user->email, $html);
+}
+----
+
+If the script renders the same template many times in a loop, that still means one `maildeno-engine` subprocess spawn per iteration — the memory cache only skips the network fetch, not the render step. See xref:php-caching.adoc[Caching].

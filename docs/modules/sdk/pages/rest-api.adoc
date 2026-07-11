@@ -22,7 +22,7 @@ Authorization: Bearer sk_live_your_api_key
 
 === `GET /v1/sdk/template/{id}`
 
-Fetch a template's JSON definition and render it locally using the SDK's WASM engine. Merge tags and context never leave your server.
+Fetch a template's JSON definition and render it locally using the SDK's local render engine — an embedded Wasm module for the JS/Python SDKs, a bundled native binary for the PHP SDK. Merge tags and context never leave your server.
 
 ==== Request
 
@@ -34,7 +34,7 @@ Authorization: Bearer <API_KEY>
 
 ==== Response — 200 OK
 
-Returns the template's JSON definition — the `TemplateJson` payload the SDKs cache and render locally via the WASM engine. Treat the body as opaque unless you are building your own renderer against the exported `TemplateJson` type.
+Returns the template's JSON definition — the `TemplateJson` payload the SDKs cache and render locally via their respective engines. Treat the body as opaque unless you are building your own renderer against the exported `TemplateJson` type.
 
 ==== Error responses
 

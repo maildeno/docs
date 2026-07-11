@@ -106,7 +106,9 @@ Your server                         Maildeno API
      │  ── Subsequent calls ───────────  │
      │                                   │
      │  ┌─ cache hit ──────────────────┐ │
-     │  │  Wasm renders — zero network │ │
+     │  │  Wasm/native engine          │ │
+     │  │  renders — zero network      │ │
+     │  └──────────────────────────────┘ │
      │  └──────────────────────────────┘ │
      │                                   │
      │  HTML / React Email / MJML        │

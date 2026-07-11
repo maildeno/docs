@@ -72,6 +72,21 @@ except MaildenoError as err:
             print(f"{loc} — {issue['msg']}")
 # body.template_id — Input should be a valid UUID, ...
 ----
+
+PHP
+[source,php]
+----
+try {
+    $client->renderHtml('not-a-uuid');
+} catch (MaildenoError $e) {
+    if ($e->issues !== null) {
+        foreach ($e->issues as $issue) {
+            error_log(implode('.', $issue['loc']) . ' — ' . $issue['msg']);
+        }
+    }
+}
+// body.template_id — Input should be a valid UUID, ...
+----
 ====
 
 == HTTP status to error code mapping
@@ -86,3 +101,5 @@ except MaildenoError as err:
 ----
 
 All other 4xx / 5xx responses will surface as `RENDER_ERROR` with the raw API message in `err.message`.
+
+NOTE: The PHP SDK maps other non-2xx statuses to a dedicated `UNKNOWN` code instead of `RENDER_ERROR`. See xref:php-error-handling.adoc[PHP — Error Handling] before porting error-handling logic between SDKs.

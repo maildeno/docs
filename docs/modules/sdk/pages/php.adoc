@@ -1,0 +1,55 @@
+= PHP SDK
+:description: Official Maildeno PHP SDK reference.
+
+The `maildeno/maildeno-php` Composer package is the official PHP SDK for the Maildeno Render API.
+
+[source,bash]
+----
+composer require maildeno/maildeno-php
+----
+
+Requires PHP 8.1+ with `ext-curl` and `ext-json`. Rendering runs through a small native `maildeno-engine` executable bundled with the package — no Wasm runtime and no FFI extension to enable.
+
+== Pages in this section
+
+* xref:php-installation.adoc[Installation {amp} Setup]
+* xref:php-rendering.adoc[Rendering]
+* xref:php-caching.adoc[Caching] — memory, disk, and stale-on-error fallback
+* xref:php-dynamic-data.adoc[Dynamic Data (merge tags {amp} context)]
+* xref:php-error-handling.adoc[Error Handling]
+* xref:php-environments.adoc[Environments {amp} Frameworks]
+
+== 30-second example
+
+[source,php]
+----
+use Maildeno\MaildenoClient;
+
+$client = new MaildenoClient(['apiKey' => getenv('MAILDENO_API_KEY')]);
+
+$html = $client->renderHtml('550e8400-e29b-41d4-a716-446655440000', [
+    'merge_tags' => [
+        'text' => ['name' => 'Noruwa', 'company' => 'Maildeno'],
+        'url'  => ['reset_url' => 'https://app.example.com/reset/abc123'],
+    ],
+    'context' => ['plan' => 'pro'],
+]);
+
+echo $html; // <!DOCTYPE html>...
+----
+
+== Exported classes
+
+[source,php]
+----
+Maildeno\MaildenoClient       // main client
+Maildeno\RenderResult         // ->output, ->target, ->fromStaleCache
+Maildeno\MaildenoError        // ->code, ->status, ->issues
+Maildeno\RenderEngine         // interface implemented by NativeEngine
+Maildeno\NativeEngine         // the bundled render engine; low-level/direct use
+Maildeno\Http\HttpTransport   // interface; default implementation is CurlTransport
+----
+
+== How it differs from the JS/Python SDKs
+
+`maildeno-php` fetches and caches template JSON the same way the JS and Python SDKs do, but it renders differently: instead of an embedded Wasm module running in-process, it shells out to a small platform-native `maildeno-engine` binary (bundled under `bin/<platform>/`) via `symfony/process`. No `ext-ffi`, no wasmtime runtime to distribute. See xref:php-caching.adoc[Caching] for what that means in practice for how the SDK caches versus how it renders.

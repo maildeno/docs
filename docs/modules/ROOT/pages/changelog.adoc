@@ -1,59 +1,88 @@
 = Changelog
 :description: Release history for Maildeno and its SDKs.
 
-All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The JavaScript/TypeScript and Python SDKs are versioned independently — the JS SDK is currently at **v2.1.3** and the Python SDK at **v2.0.3**.
+All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The JavaScript/TypeScript, Python, and PHP SDKs are versioned independently — the JS SDK is currently at **v2.1.3**, the Python SDK at **v2.0.3**, and the PHP SDK at **v2.0.0**.
 
-== JavaScript / TypeScript SDK v2.1.3 — 2026-07-10
+Entries are grouped by release date. Where multiple SDKs shipped the same change on the same day, they're listed together under one heading instead of being repeated per SDK; where SDKs shipped different changes on the same day, each gets its own subsection.
 
-=== Changed
+== 2026-07-10
 
-**Updated the embedded WebAssembly rendering engine.** The SDK now ships with the latest `engine.wasm`, incorporating rendering improvements and internal engine refinements while maintaining API compatibility.
+**JavaScript/TypeScript v2.1.3** · **Python v2.0.3** · **PHP v2.0.0**
 
-=== Internal
+=== Rendering engine updated (JavaScript/TypeScript, Python)
 
-**Aligned the SDK with the unified Maildeno rendering engine build system.** The rendering engine is now produced from the same cross-platform build pipeline used across Maildeno SDKs, ensuring consistent rendering behaviour between WebAssembly and native runtimes.
-
-== Python SDK v2.0.3 — 2026-07-10
-
-=== Changed
+==== Changed
 
 **Updated the embedded WebAssembly rendering engine.** The SDK now ships with the latest `engine.wasm`, incorporating rendering improvements and internal engine refinements while maintaining API compatibility.
 
-=== Internal
+==== Internal
 
 **Aligned the SDK with the unified Maildeno rendering engine build system.** The rendering engine is now produced from the same cross-platform build pipeline used across Maildeno SDKs, ensuring consistent rendering behaviour between WebAssembly and native runtimes.
 
-== JavaScript / TypeScript SDK v2.1.2 — 2026-06-21
+=== PHP: Wasm/FFI engine replaced with a native binary — breaking
 
-=== Fixed
-**Menu component spacing corrected for mobile screens.** Left, right, and bottom margins were misaligned on small viewports. Margins are now consistent across breakpoints.
+==== Changed — breaking
 
-**Preheader spacer sequence added for HTML and MJML templates.** Preheader text lacked the invisible-character padding sequence needed to prevent email clients from pulling in unwanted body text as preview copy. The standard spacer string (`&#847; &zwnj; &nbsp;` × 7) is now included after the preheader content in both plain HTML and MJML output.
+**Rendering moved off wasm/FFI entirely.** Previous builds rendered through an embedded `engine.wasm` via PHP FFI bindings to wasmtime (`ext-ffi` + a ~15–25MB wasmtime shared library per platform). That path — `MaildenoEngine`, `engine.wasm`, the `wasmPath`/`libPath` config keys, and the `lib/` directory — is removed. `NativeEngine` is now the only engine: no FFI extension, no wasmtime runtime to distribute, and a bundled binary typically well under 1MB per platform.
 
-== Python SDK v2.0.2 — 2026-06-21
+* `ext-ffi` is no longer referenced anywhere in `composer.json`.
+* `symfony/process` is now a hard `require` (`^6.4 || ^7.0`), not a `suggest` — it's needed for every render, not an optional integration.
 
-=== Fixed
-**Menu component spacing corrected for mobile screens.** Left, right, and bottom margins were misaligned on small viewports. Margins are now consistent across breakpoints.
+==== Added
 
-**Preheader spacer sequence added for HTML and MJML templates.** Preheader text lacked the invisible-character padding sequence needed to prevent email clients from pulling in unwanted body text as preview copy. The standard spacer string (`&#847; &zwnj; &nbsp;` × 7) is now included after the preheader content in both plain HTML and MJML output.
+* `NativeEngine` — the render engine. Runs a small platform-native `maildeno-engine` executable (via `symfony/process`), bundled with the package under `bin/<platform>/`. `MaildenoClient` resolves and uses it automatically — no configuration required for normal use.
+* `RenderEngine` — the interface `NativeEngine` implements, so `MaildenoClient` (and its 3rd constructor argument, for injecting a pre-built or stub engine) isn't coupled to one concrete implementation.
+* `MaildenoClient` accepts an optional `enginePath` config key with an exact binary path, for the rare case of overriding auto-detection (a non-standard binary location, or testing against a stub).
 
-== JavaScript / TypeScript SDK v2.1.1 — 2026-06-12
+NOTE: This lands the same day as the JS/Python engine refresh above — both come out of the same unified cross-platform engine build pipeline described in that entry's Internal note. PHP simply goes one step further, dropping Wasm entirely in favor of a native binary.
 
-=== Fixed
+See xref:sdk:php-rendering.adoc[PHP Rendering] and xref:sdk:php-caching.adoc[PHP Caching] for current behavior.
 
-* Visibility context now handles non-string values. Context passed as a number or boolean (e.g. `context: { premium: true }`, `context: { tier: 2 }`) was read as empty, so visibility rules comparing against it never matched and the affected rows were always hidden. Numbers and booleans are now coerced for comparison — `2` matches `"2"`, `true` matches `"true"`. String context was unaffected.
-* Visibility context keys are now matched case-insensitively. Capitalized or camelCase keys (e.g. `Premium`, `orderCount`) previously failed to resolve. The rule `tag` must still match the context key _name_ — `isPremium` and `premium` remain distinct.
+== 2026-07-06
 
-== Python SDK v2.0.1 — 2026-06-12
+**PHP v1.0.0**
 
-=== Fixed
-
-* Visibility context now handles non-string values. Context passed as a number or boolean (e.g. `context={"premium": True}`, `context={"tier": 2}`) was read as empty, so visibility rules comparing against it never matched and the affected rows were always hidden. Numbers and booleans are now coerced for comparison — `2` matches `"2"`, `True` matches `"true"`. String context was unaffected.
-* Visibility context keys are now matched case-insensitively. Capitalized or camelCase keys (e.g. `Premium`, `orderCount`) previously failed to resolve. The rule `tag` must still match the context key _name_ — `isPremium` and `premium` remain distinct.
-
-== JavaScript / TypeScript SDK v2.1.0 — 2026-06-07
+Initial stable release of the PHP SDK, with full feature parity with the JavaScript/TypeScript SDK (v2.1.2).
 
 === Added
+
+* `MaildenoClient` — fetches template JSON from the Maildeno API, caches it, and renders via the embedded Wasm engine. Public surface mirrors the JS SDK: `render()`, `renderHtml()`, `renderReact()`, `renderMjml()`, `listCached()`, `deleteCached()`, `clearCache()`, and the deprecated `invalidate()` alias.
+* Caching — `MemoryStore` (in-process, TTL, oldest-entry eviction) and `DiskStore` (one atomic JSON file per template, survives restarts) behind a `TemplateCache` facade. Defaults: 5-minute TTL, 50 entries.
+* Stale-on-error fallback — when the TTL has expired and the API is unreachable, the last known-good template is used and `RenderResult::$fromStaleCache` is set to `true`.
+* `MaildenoError` — single error type with a string `code`, HTTP `status`, and optional validation `issues`. Status mapping matches the JS SDK (401/403/404/422 → codes; network → `NETWORK_ERROR`; timeout → `TIMEOUT`).
+* `Minify` — whitespace compaction for `html`, `mjml`, and `react-email`, a faithful port of `minify.ts` with shared golden test vectors.
+* `MaildenoEngine` — FFI-to-wasmtime bridge running the same `engine.wasm` as the other SDKs; rendered output is byte-for-byte identical.
+* Injectable HTTP transport (`HttpTransport`, default `CurlTransport`) and optional engine injection, for custom clients and testing.
+* Zero-dependency autoloader and a 97-test framework-free suite.
+
+NOTE: The `MaildenoEngine` Wasm/FFI bridge shipped here was replaced four days later — see PHP v2.0.0 above.
+
+== 2026-06-21
+
+**JavaScript/TypeScript v2.1.2** · **Python v2.0.2**
+
+=== Fixed
+
+**Menu component spacing corrected for mobile screens.** Left, right, and bottom margins were misaligned on small viewports. Margins are now consistent across breakpoints.
+
+**Preheader spacer sequence added for HTML and MJML templates.** Preheader text lacked the invisible-character padding sequence needed to prevent email clients from pulling in unwanted body text as preview copy. The standard spacer string (`&#847; &zwnj; &nbsp;` × 7) is now included after the preheader content in both plain HTML and MJML output.
+
+== 2026-06-12
+
+**JavaScript/TypeScript v2.1.1** · **Python v2.0.1**
+
+=== Fixed
+
+* Visibility context now handles non-string values. Context passed as a number or boolean (e.g. `context: { premium: true }` in JS, `context={"premium": True}` in Python) was read as empty, so visibility rules comparing against it never matched and the affected rows were always hidden. Numbers and booleans are now coerced for comparison — `2` matches `"2"`, and `true`/`True` matches `"true"`. String context was unaffected.
+* Visibility context keys are now matched case-insensitively. Capitalized or camelCase keys (e.g. `Premium`, `orderCount`) previously failed to resolve. The rule `tag` must still match the context key _name_ — `isPremium` and `premium` remain distinct.
+
+== 2026-06-07
+
+**JavaScript/TypeScript v2.1.0** · **Python v2.0.0**
+
+=== JavaScript/TypeScript v2.1.0
+
+==== Added
 
 * Disk cache strategy — set `cache: { type: "disk", path: "..." }` to persist template JSON to the local filesystem. Disk-cached entries survive process restarts and are shared across workers on the same filesystem.
 * Unified `cache` config object — `type`, `path`, `ttl`, and `maxEntries` now live under a single `cache` key.
@@ -61,28 +90,28 @@ All notable changes to Maildeno are documented here. Maildeno follows https://se
 * `client.deleteCached(templateId)` — removes a single template from the cache. Replaces `invalidate()`.
 * `CacheConfig` type exported from the package root.
 
-=== Changed
+==== Changed
 
 * `client.clearCache()` is now async (was sync). Awaiting it is required in disk mode; memory mode resolves immediately, so existing code that does not `await` still works in practice.
 * `client.invalidate(templateId)` is now async and deprecated — it delegates to `deleteCached()` internally, so existing code keeps working.
 
-=== Removed — breaking
+==== Removed — breaking
 
 * `cacheTtl` top-level config option — moved into `cache.ttl`.
 * `cacheMaxEntries` top-level config option — moved into `cache.maxEntries`.
 
 See xref:sdk:js-caching.adoc[JS Caching] for the full caching reference.
 
-== Python SDK v2.0.0 — 2026-06-07
+=== Python v2.0.0
 
-=== Changed — breaking
+==== Changed — breaking
 
 * Rendering is now local. The SDK fetches template JSON once via `GET /v1/sdk/template/{id}` and renders in-process using the embedded Wasm engine. Your merge tags {amp} visibility context never leave your server.
 * `POST /v1/sdk/render` is no longer called. Existing direct-HTTP integrations keep working until the endpoint is removed (see the `Deprecation` response header).
 * `RenderResult` gains an optional `from_stale_cache: bool = False` field. Code that reads `.output`, `.target`, or `.template_id` is unaffected.
 * `invalidate(template_id)` is deprecated — use `delete_cached(template_id)`.
 
-=== Added
+==== Added
 
 * `wasmtime` runtime dependency — the Wasm engine that runs the embedded renderer (Linux, macOS, and Windows on Python 3.9+).
 * `engine.wasm` shipped inside the `maildeno` package, located via `importlib.resources` (works in wheels, editable installs, virtualenvs, Lambda layers, and Docker).
@@ -96,7 +125,9 @@ See xref:sdk:js-caching.adoc[JS Caching] for the full caching reference.
 
 See xref:sdk:py-caching.adoc[Python Caching] for the full caching reference.
 
-== JavaScript / TypeScript SDK v2.0.0 — 2026-06-05
+== 2026-06-05
+
+**JavaScript/TypeScript v2.0.0**
 
 === Changed — breaking
 
@@ -113,9 +144,11 @@ See xref:sdk:py-caching.adoc[Python Caching] for the full caching reference.
 * Output minification.
 * `TemplateJson` type exported from the package root.
 
-== SDK v1.0.0 — 2026-05-29
+== 2026-05-29
 
-=== JavaScript / TypeScript SDK
+**JavaScript/TypeScript v1.0.0** · **Python v1.0.0**
+
+=== JavaScript/TypeScript SDK
 
 * Initial stable release of `maildeno` npm package
 * `MaildenoClient` with `render()`, `renderHtml()`, `renderReact()`, `renderMjml()` methods

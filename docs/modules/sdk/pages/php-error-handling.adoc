@@ -1,0 +1,86 @@
+= Error Handling
+:description: Handle errors from the Maildeno PHP SDK.
+
+Every failure is a `Maildeno\MaildenoError`, which extends PHP's built-in `\Exception`.
+
+[source,php]
+----
+use Maildeno\MaildenoError;
+
+try {
+    $client->renderHtml($id);
+} catch (MaildenoError $e) {
+    $e->code;         // 'INVALID_API_KEY' | 'FORBIDDEN' | 'TEMPLATE_NOT_FOUND'
+                       // | 'RENDER_ERROR'  | 'NETWORK_ERROR' | 'TIMEOUT' | 'UNKNOWN'
+    $e->status;        // HTTP status (0 for network/timeout)
+    $e->issues;        // array of validation issues for 422s, else null
+    $e->getMessage();  // human-readable message, inherited from Exception
+}
+----
+
+NOTE: PHP's `\Exception` already declares an `int $code` property. `MaildenoError::$code` widens that to hold the string SDK code shown above instead of an int. It's public but should be treated as immutable — don't assign to it.
+
+== Status mapping
+
+[.table-scroll, cols="1,1,3", options=header]
+|===
+|HTTP status|Code|Notes
+
+|`401`
+|`INVALID_API_KEY`
+|Key is missing, malformed, revoked, or expired.
+
+|`403`
+|`FORBIDDEN`
+|Key's plan/scope doesn't include the requested target. A message like *"This API key does not have access to the 'mjml' target"* means check your account/plan — it isn't an SDK bug.
+
+|`404`
+|`TEMPLATE_NOT_FOUND`
+|`templateId` doesn't match any template in your account.
+
+|`422`
+|`RENDER_ERROR`
+|Request body is invalid, or the render pipeline failed. `$e->issues` is populated from a Pydantic-style `detail` array.
+
+|other non-2xx
+|`UNKNOWN`
+|—
+
+|network failure
+|`NETWORK_ERROR`
+|—
+
+|request exceeded timeout
+|`TIMEOUT`
+|—
+|===
+
+[IMPORTANT]
+====
+This differs slightly from the JS/Python SDKs, which fall back to `RENDER_ERROR` for any other non-2xx status instead of a dedicated `UNKNOWN` code. If you're porting error-handling logic between SDKs, don't assume the fallback code matches — check `$e->code === 'UNKNOWN'` on PHP where you'd check for `RENDER_ERROR` elsewhere. See xref:error-codes.adoc[Error Codes] for the shared cross-SDK reference table.
+====
+
+== Checking `$e->issues` (validation errors)
+
+When `code` is `RENDER_ERROR` and the cause is invalid input, `issues` gives field-level detail:
+
+[source,php]
+----
+use Maildeno\MaildenoError;
+
+try {
+    $client->renderHtml('not-a-uuid');
+} catch (MaildenoError $e) {
+    if ($e->issues !== null) {
+        foreach ($e->issues as $issue) {
+            error_log(implode('.', $issue['loc']) . ' — ' . $issue['msg']);
+        }
+    }
+}
+// body.template_id — Input should be a valid UUID, ...
+----
+
+== See also
+
+* xref:error-codes.adoc[Error Codes] — the full cross-SDK code reference.
+* xref:php-caching.adoc[Caching] — what happens to a render when the API is unreachable but a stale cached copy exists (spoiler: no exception).

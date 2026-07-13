@@ -1,9 +1,19 @@
 = Changelog
 :description: Release history for Maildeno and its SDKs.
 
-All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The JavaScript/TypeScript, Python, and PHP SDKs are versioned independently — the JS SDK is currently at **v2.1.3**, the Python SDK at **v2.0.3**, and the PHP SDK at **v2.0.0**.
+All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The JavaScript/TypeScript, Python, and PHP SDKs are versioned independently — the JS SDK is currently at **v2.1.4**, the Python SDK at **v2.0.4**, and the PHP SDK at **v2.0.1**.
 
 Entries are grouped by release date. Where multiple SDKs shipped the same change on the same day, they're listed together under one heading instead of being repeated per SDK; where SDKs shipped different changes on the same day, each gets its own subsection.
+
+== 2026-07-13
+
+**JavaScript/TypeScript v2.1.4** · **Python v2.0.4** · **PHP v2.0.1**
+
+=== Rendering engine updated (JavaScript/TypeScript, Python, PHP)
+
+==== Fixed
+
+**Resolved missing border radius on the outer MJML table row.** The outer `<td>` wrapper now correctly preserves border radius during MJML rendering, ensuring consistent rounded corners in the rendered email output.
 
 == 2026-07-10
 

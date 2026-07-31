@@ -1,9 +1,9 @@
 = SDK Overview
-:description: Overview of the official Maildeno SDKs for JavaScript/TypeScript and Python.
+:description: Overview of the official Maildeno SDKs for JavaScript/TypeScript, Python, and PHP.
 
-Maildeno ships official SDKs for JavaScript/TypeScript and Python. Both expose an identical conceptual surface — only the language idioms differ.
+Maildeno ships official SDKs for JavaScript/TypeScript, Python, and PHP. All three expose an identical conceptual surface — only the language idioms differ.
 
-Since v2.0 the SDKs render *in-process*: they fetch a template's JSON from Maildeno once via `GET /v1/sdk/template/{id}`, cache it locally (memory or disk), and render HTML / React Email / MJML on your own server. Your merge tags and visibility context never leave your infrastructure. See xref:js-caching.adoc[JS Caching] / xref:py-caching.adoc[Python Caching] for the caching model.
+All three SDKs render *in-process*: each fetches a template's JSON from Maildeno once via `GET /v1/sdk/template/{id}`, caches it locally (memory or disk), and renders HTML / React Email / MJML on your own server. Your merge tags and visibility context never leave your infrastructure. JavaScript/TypeScript and Python render through an embedded WebAssembly engine; PHP renders through a small native binary instead — no Wasm runtime or FFI extension required — as of PHP SDK v2.0. See xref:js-caching.adoc[JS Caching] / xref:py-caching.adoc[Python Caching] / xref:php-caching.adoc[PHP Caching] for the caching model.
 
 == Available SDKs
 
@@ -20,65 +20,82 @@ Since v2.0 the SDKs render *in-process*: they fetch a template's JSON from Maild
 |https://pypi.org/project/maildeno/[`maildeno` on PyPI]
 |{py-sdk-version}
 |Python 3.9+
+
+|PHP
+|https://packagist.org/packages/maildeno/maildeno[`maildeno/maildeno` on Packagist]
+|1.0.1
+|PHP 8.1+
 |===
 
 == Quick comparison
 
-[.table-scroll, cols="2,3,3", options=header]
+[.table-scroll, cols="2,3,3,3", options=header]
 |===
-|Feature|JavaScript SDK|Python SDK
+|Feature|JavaScript SDK|Python SDK|PHP SDK
 
 |Async support
 |Native (`async/await`, Promise-based)
 |`AsyncMaildenoClient` (asyncio / httpx)
+|Not available (SDK is sync-only)
 
 |Sync support
 |N/A (JS is async by nature)
 |`MaildenoClient` (blocking httpx)
+|`MaildenoClient` (blocking `CurlTransport`)
 
 |Transport
 |Native `fetch`
 |`httpx` (bring-your-own client supported)
+|`HttpTransport` (default `CurlTransport`, injectable)
 
 |Type safety
 |Full TypeScript types exported
 |Full PEP 561 type stubs (mypy / pyright)
+|Native PHP 8.1+ type declarations
 
 |Error type
+|`MaildenoError`
 |`MaildenoError`
 |`MaildenoError`
 
 |Validation errors
 |`err.issues: ValidationIssue[]`
 |`err.issues: list[ValidationIssue]`
+|`$err->issues` (array of `ValidationIssue`)
 
 |Rendering
 |In-process (embedded engine)
 |In-process (embedded Wasm engine)
+|In-process (native binary, no Wasm/FFI)
 
 |Caching
+|Memory (default) or disk, with stale-on-error fallback
 |Memory (default) or disk, with stale-on-error fallback
 |Memory (default) or disk, with stale-on-error fallback
 |===
 
 == Render methods
 
-Both SDKs expose the same methods:
+All three SDKs expose the same methods — PHP uses the same camelCase names as JavaScript/TypeScript:
 
-[.table-scroll, cols="2,3", options=header]
+[.table-scroll, cols="2,2,3", options=header]
 |===
-|Method|Returns
+|JavaScript / PHP|Python|Returns
 
+|`render(options)`
 |`render(options)`
 |Full result object (`output`, `target`, `templateId`)
 
-|`renderHtml(id, data?)` / `render_html(id, data)`
+|`renderHtml(id, data?)`
+|`render_html(id, data)`
 |Rendered HTML string
 
-|`renderReact(id, data?)` / `render_react(id, data)`
+|`renderReact(id, data?)`
+|`render_react(id, data)`
 |Rendered React/TSX string
 
-|`renderMjml(id, data?)` / `render_mjml(id, data)`
+|`renderMjml(id, data?)`
+|`render_mjml(id, data)`
 |Rendered MJML string
 |===
 
@@ -86,6 +103,7 @@ Both SDKs expose the same methods:
 
 * xref:javascript.adoc[JavaScript / TypeScript SDK] — full reference
 * xref:python.adoc[Python SDK] — full reference
+* xref:php.adoc[PHP SDK] — full reference
 * xref:rest-api.adoc[REST API] — raw HTTP reference (no SDK)
 * xref:error-codes.adoc[Error Codes] — complete error code reference
 * xref:api-keys.adoc[API Key Scopes] — key creation and permissions

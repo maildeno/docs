@@ -3,7 +3,7 @@
 
 Maildeno ships official SDKs for JavaScript/TypeScript, Python, and PHP. All three expose an identical conceptual surface — only the language idioms differ.
 
-All three SDKs render *in-process*: each fetches a template's JSON from Maildeno once via `GET /v1/sdk/template/{id}`, caches it locally (memory or disk), and renders HTML / React Email / MJML on your own server. Your merge tags and visibility context never leave your infrastructure. JavaScript/TypeScript and Python render through an embedded WebAssembly engine; PHP renders through a small native binary instead — no Wasm runtime or FFI extension required — as of PHP SDK v2.0. See xref:js-caching.adoc[JS Caching] / xref:py-caching.adoc[Python Caching] / xref:php-caching.adoc[PHP Caching] for the caching model.
+All three SDKs render *in-process*: each fetches a template's JSON from Maildeno once via `GET /v1/sdk/template/{id}`, caches it locally (memory or disk), and renders HTML / React Email / MJML on your own server. Your merge tags and visibility context never leave your infrastructure. JavaScript/TypeScript and Python render through an embedded WebAssembly engine; PHP renders through a small native binary instead — no Wasm runtime or FFI extension required — as of PHP SDK v1.0.0. See xref:js-caching.adoc[JS Caching] / xref:py-caching.adoc[Python Caching] / xref:php-caching.adoc[PHP Caching] for the caching model.
 
 == Available SDKs
 
@@ -13,17 +13,17 @@ All three SDKs render *in-process*: each fetches a template's JSON from Maildeno
 
 |JavaScript / TypeScript
 |https://www.npmjs.com/package/maildeno[`maildeno` on npm]
-|{js-sdk-version}
+|2.1.5
 |Node.js 18+ (or any runtime with native `fetch`)
 
 |Python
 |https://pypi.org/project/maildeno/[`maildeno` on PyPI]
-|{py-sdk-version}
+|2.0.5
 |Python 3.9+
 
 |PHP
 |https://packagist.org/packages/maildeno/maildeno[`maildeno/maildeno` on Packagist]
-|1.0.1
+|1.0.2
 |PHP 8.1+
 |===
 
@@ -104,6 +104,6 @@ All three SDKs expose the same methods — PHP uses the same camelCase names as 
 * xref:javascript.adoc[JavaScript / TypeScript SDK] — full reference
 * xref:python.adoc[Python SDK] — full reference
 * xref:php.adoc[PHP SDK] — full reference
-* xref:rest-api.adoc[REST API] — raw HTTP reference (no SDK)
+* xref:rest-api.adoc[REST API] — raw HTTP reference (JSON)
 * xref:error-codes.adoc[Error Codes] — complete error code reference
 * xref:api-keys.adoc[API Key Scopes] — key creation and permissions

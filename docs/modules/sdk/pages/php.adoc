@@ -1,11 +1,11 @@
 = PHP SDK
 :description: Official Maildeno PHP SDK reference.
 
-The `maildeno/maildeno-php` Composer package is the official PHP SDK for the Maildeno Render API.
+The `maildeno/maildeno` Composer package is the official PHP SDK for the Maildeno Render API.
 
 [source,bash]
 ----
-composer require maildeno/maildeno-php
+composer require maildeno/maildeno
 ----
 
 Requires PHP 8.1+ with `ext-curl` and `ext-json`. Rendering runs through a small native `maildeno-engine` executable bundled with the package — no Wasm runtime and no FFI extension to enable.

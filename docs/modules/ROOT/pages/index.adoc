@@ -39,11 +39,12 @@ Maildeno gives product teams a drag-and-drop email editor and gives developers a
 
 Maildeno is a two-part product:
 
+* **Open Source Editor & Renderer** — Prefer not to use the hosted platform at all? `@maildeno/editor` and `@maildeno/renderer` are MIT-licensed packages that give you the same drag-and-drop editor and rendering engine, self-hosted, with zero Maildeno backend. See xref:opensource:overview.adoc[Open Source].
+
 * **Email Builder** — A visual drag-and-drop editor for designing responsive email templates. Teams can manage layouts, merge tags, visibility rules, and export targets all from the dashboard — no code required.
 
-* **Render API & SDKs** — Fetch a template's JSON structure via our REST API. Then the SDK's local render engine — an embedded WebAssembly module for JavaScript/Python, a bundled native binary for PHP — takes that JSON, merges your dynamic data, applies visibility rules, and compiles it locally into HTML, React Email, or MJML — ready to pipe into any email-sending service. Your data stays completely local. Maildeno never sees it.
+* **Render API & SDKs** — Fetch a template's JSON structure via our REST API. Then the SDK's local render engine — an embedded WebAssembly module for JavaScript/Python, a bundled native binary for PHP takes that JSON, merges your dynamic data, applies visibility rules, and compiles it locally into HTML, React Email, or MJML ready to pipe into any email-sending service. Your data stays completely local. Maildeno never sees it.
 
-* **Open Source Editor & Renderer** — Prefer not to use the hosted platform at all? `@maildeno/editor` and `@maildeno/renderer` are MIT-licensed packages that give you the same drag-and-drop editor and rendering engine, self-hosted, with zero Maildeno backend. See xref:opensource:overview.adoc[Open Source].
 
 
 == Key capabilities

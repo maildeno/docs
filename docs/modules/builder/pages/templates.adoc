@@ -71,15 +71,15 @@ Apply tags to templates from the template library to keep large collections mana
 |3 templates
 |8
 
-|Standard
-|Unlimited
-|40
+// |Standard
+// |Unlimited
+// |40
 
-|Pro
-|Unlimited
-|Unlimited
-
-// |Enterprise
+// |Pro
 // |Unlimited
 // |Unlimited
+
+|Enterprise
+|Unlimited
+|Unlimited
 |===

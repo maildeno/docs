@@ -5,6 +5,8 @@ Maildeno ships official SDKs for JavaScript/TypeScript, Python, and PHP. All thr
 
 All three SDKs render *in-process*: each fetches a template's JSON from Maildeno once via `GET /v1/sdk/template/{id}`, caches it locally (memory or disk), and renders HTML / React Email / MJML on your own server. Your merge tags and visibility context never leave your infrastructure. JavaScript/TypeScript and Python render through an embedded WebAssembly engine; PHP renders through a small native binary instead — no Wasm runtime or FFI extension required — as of PHP SDK v1.0.0. See xref:js-caching.adoc[JS Caching] / xref:py-caching.adoc[Python Caching] / xref:php-caching.adoc[PHP Caching] for the caching model.
 
+NOTE: These SDKs are clients for Maildeno's *hosted* Render API and require an API key. Rendering an already-exported template JSON file with no API key, no account, and no network access at all? See the open-source xref:opensource:renderer.adoc[`@maildeno/renderer`] package instead.
+
 == Available SDKs
 
 [.table-scroll, cols="1,1,1,1", options=header]

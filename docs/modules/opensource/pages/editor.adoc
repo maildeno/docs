@@ -1,0 +1,154 @@
+= @maildeno/editor
+:description: Install and embed Maildeno's open-source drag-and-drop email editor in your own application.
+
+[.lead]
+`@maildeno/editor` is the same drag-and-drop editor used in the Maildeno dashboard, packaged as a standalone, MIT-licensed component you can embed in your own app.
+
+NOTE: This page covers the self-hosted, embeddable editor. For the *hosted* dashboard version, see xref:builder:overview.adoc[Email Builder].
+
+== Installation
+
+[source,bash]
+----
+npm install @maildeno/editor
+----
+
+`vue` (`^3.4.0`) peer dependencies. It installs automatically alongside `@maildeno/editor` — no separate installation needed.
+
+The custom element (below) doesn't have even that requirement — it works on a page with no Vue app at all.
+
+== Two ways to mount it
+
+=== As a Vue component
+
+For apps already built on Vue 3:
+
+[source,typescript]
+----
+import { EmailEditor } from "@maildeno/editor"
+----
+
+[source,html]
+----
+<EmailEditor />
+----
+
+=== As a framework-agnostic custom element
+
+No Vue, no build step required on the host page:
+
+[source,html]
+----
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Maildeno Editor Vanilla</title>
+    <style>
+      body {
+        margin: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="editor" style="height: 100vh"></div>
+
+    <script type="module">
+      import { init } from "@maildeno/editor/init";
+
+      const handle = await init({
+        container: "#editor",
+        capabilities: { export: ["html", "mjml", "json"] },
+        onSendTestEmail: async ({ to, subject, html }) => {
+          await fetch("/api/send-test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ to, subject, html }),
+          });
+        },
+      });
+
+      handle.on("save", ({ templateId }) => {
+        console.log(templateId);
+
+        const html = handle.getHtml();
+        const react = handle.getReactEmail();
+        const mjml = handle.getMjml();
+
+        console.log(html);
+        console.log(react);
+        console.log(mjml);
+      });
+
+      // Single-page apps: tear down before removing the container
+      window.addEventListener("beforeunload", () => handle.destroy());
+    </script>
+  </body>
+</html>
+
+----
+
+
+
+`init()` mounts a `<maildeno-editor>` custom element internally and returns an `EditorHandle` — `registerBlock()`, `registerESPWrapper()`, `registerMergeTags()`, `setTheme()`, `setUiTheme()`, `getHtml()`, `on(event, callback)`, and `destroy()`.
+
+== Storage adapters
+
+Templates, saved rows, and version history are all read and written through one interface:
+
+[source,typescript]
+----
+interface EditorStorageAdapter {
+  loadTemplate(templateId?: string): Promise<TemplateSnapshot | null>
+  saveTemplate(snapshot: TemplateSnapshot, templateId?: string): Promise<void>
+  listSavedRows(): Promise<SavedRow[]>
+  saveSavedRow(row: Record<string, any>, name: string): Promise<SavedRow>
+  deleteSavedRow(id: string): Promise<void>
+  renameSavedRow(id: string, name: string): Promise<void>
+  listVersions(templateId?: string): Promise<TemplateSnapshot[]>
+  saveVersion(snapshot: TemplateSnapshot, templateId?: string): Promise<void>
+  uploadImage(file: File): Promise<string>
+}
+----
+
+By default, `@maildeno/editor` uses a built-in `localStorage` adapter — nothing to configure, nothing leaves the browser. Pass your own `storageAdapter` to persist templates to your own backend, or to Maildeno's hosted platform for cross-device sync, team collaboration, and an image CDN.
+
+== Export targets
+
+The editor exports the same four targets the rendering engine supports: `html`, `mjml`, `react-email`, and `json`, across 13 built-in ESP dialects for conditional-logic syntax (Mailchimp `*|IF|*`-style blocks, Liquid, and others) — the same export engine used by the hosted builder. `registerESPWrapper()` adds a dialect the built-in set doesn't cover.
+
+== Customization
+
+[cols="1,3", options=header]
+|===
+|API|Purpose
+
+|`registerBlock(id, definition)`
+|Add a custom block type — a `schema` (drives the settings panel), a `render` function for the canvas, and optional per-target `renderEmail` functions.
+
+|`theme` / `setTheme()`
+|Set brand colors (`primary`, `primaryHover`, and dark-mode variants). Applied via CSS custom properties.
+
+|`uiTheme` / `setUiTheme()`
+|`'light'`, `'dark'`, or `'auto'` (follows `prefers-color-scheme`).
+
+|`capabilities`
+|Host-controlled permission flags — `editBrandColors`, `editLayout`, `deleteBlocks` — for restricting what end users can change. No plan or billing concept is baked into the package.
+
+|Lifecycle hooks
+|`onBeforeSave`, `onAfterExport`, `onBlockAdd` / `onBlockRemove`, `onValidationError`, `onSendTestEmail`.
+|===
+
+== From editor output to a rendered email
+
+Exporting a template (**Export → JSON**) produces the same template JSON format used across Maildeno, so the output plugs directly into either rendering path:
+
+* Offline, no API key: xref:opensource:renderer.adoc[`@maildeno/renderer`]
+* Through Maildeno's hosted Render API: any of the xref:sdk:overview.adoc[hosted SDKs]
+
+== Where to go next
+
+* xref:opensource:renderer.adoc[`@maildeno/renderer`] — render the exported JSON to HTML, MJML, or React Email
+* xref:opensource:overview.adoc[Open Source overview] — how self-hosting relates to the hosted platform
+* https://github.com/maildeno/editor[Source on GitHub]

@@ -3,6 +3,8 @@
 
 This guide walks you from creating a template in the Maildeno builder to rendering it in your application.
 
+TIP: This path uses the hosted Maildeno dashboard and Render API. Prefer to self-host with no Maildeno account at all? See xref:opensource:overview.adoc[Open Source] for the same editor and renderer running entirely on your own infrastructure.
+
 == Prerequisites
 
 * A {dashboard-url}[Maildeno account] (free tier available)

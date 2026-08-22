@@ -7,5 +7,6 @@ version: ~        # ~ means "unversioned" — a single canonical version
 start_page: index.adoc
 nav:
   - modules/ROOT/nav.adoc
+  - modules/opensource/nav.adoc
   - modules/builder/nav.adoc
   - modules/sdk/nav.adoc

@@ -1,0 +1,149 @@
+= @maildeno/renderer
+:description: Render Maildeno templates to HTML, MJML, or React Email entirely offline — no API key, no network call.
+
+[.lead]
+`@maildeno/renderer` renders a template JSON file to HTML, MJML, or React Email — locally, through an embedded WebAssembly engine. No API calls, no API key, no network access. Output is byte-identical to Maildeno's hosted renderer, because it's the same engine.
+
+NOTE: This is the open-source, offline renderer. If you're looking for the client that talks to Maildeno's *hosted* Render API, see xref:sdk:javascript.adoc[the JavaScript/TypeScript SDK] instead — xref:opensource:overview.adoc[Open Source] explains how the two relate.
+
+== Installation
+
+[source,bash]
+----
+npm install @maildeno/renderer
+----
+
+Requires Node.js 18+.
+
+== Quick example
+
+[source,typescript]
+----
+import { render } from "@maildeno/renderer"
+
+const html = await render("templates/welcome.json", {
+  mergeTags: { text: { first_name: "Ada" } },
+  context: { plan: "premium" },
+})
+----
+
+A path in, a rendered string out — that's the whole API for the common case.
+
+== Getting a template JSON file
+
+Any of these produce the same format:
+
+* Export from the open-source xref:opensource:editor.adoc[`@maildeno/editor`] — **Export → JSON**. No conversion needed; the export format is exactly what the renderer consumes.
+* Export from the hosted dashboard's xref:builder:exporting.adoc[Exporting] panel.
+* Fetch it yourself via `GET /v1/sdk/template/{id}` on the xref:sdk:rest-api.adoc[REST API] and save it to disk.
+
+Name the file whatever suits you — `welcome.json`, or the template's UUID.
+
+== API reference
+
+[.table-scroll, cols="2,3,2", options=header]
+|===
+|Function|Signature|Returns
+
+|`render(source, options?)`
+|`(TemplateSource, RenderOptions) => Promise<string>`
+|Rendered output for `options.target` (default `"html"`)
+
+|`renderToResult(source, options?)`
+|`(TemplateSource, RenderOptions) => Promise<RenderResult>`
+|`{ output, templateId, templateName, target }`
+
+|`renderHtml(source, options?)`
+|Same as `render`, pinned to `target: "html"`
+|HTML string
+
+|`renderMjml(source, options?)`
+|Same as `render`, pinned to `target: "mjml"`
+|MJML source string
+
+|`renderReactEmail(source, options?)`
+|Same as `render`, pinned to `target: "react-email"`
+|React Email TSX string
+|===
+
+`source` is either a path to a `.json` template file, or an already-parsed template object.
+
+=== RenderOptions
+
+[.table-scroll, cols="1,2,3", options=header]
+|===
+|Option|Type|Description
+
+|`target`
+|`"html" \| "mjml" \| "react-email"`
+|Output format. Default `"html"`.
+
+|`mergeTags`
+|`{ text?, url?, attr? }`
+|Same grouping as the hosted SDKs — each group is escaped appropriately for where it's substituted.
+
+|`context`
+|`Record<string, string \| number \| boolean>`
+|Values used to evaluate xref:builder:visibility-rules.adoc[visibility rules].
+
+|`minify`
+|`boolean`
+|Minify the output. Default `true`.
+
+|`baseDir`
+|`string`
+|Base directory for resolving a relative template path. Default `process.cwd()`.
+|===
+
+An unmatched merge tag is stripped from the output rather than left visible — worth knowing, since a typo'd tag name disappears silently instead of showing up in a test render.
+
+=== Errors
+
+All failures throw a `RenderError` with one of these codes:
+
+[cols="1,3", options=header]
+|===
+|Code|Meaning
+
+|`TEMPLATE_NOT_FOUND`
+|The given path doesn't exist.
+
+|`INVALID_TEMPLATE`
+|The file isn't valid template JSON (wrong shape, unsupported `schema_version`).
+
+|`RENDER_ERROR`
+|The engine failed to render the (validly-shaped) template.
+|===
+
+== How this differs from the `maildeno` SDK
+
+Both render Maildeno templates in-process through the same WebAssembly engine, but they solve different problems:
+
+[.table-scroll, cols="1,2,2", options=header]
+|===
+| |`@maildeno/renderer`|`maildeno` (xref:sdk:javascript.adoc[hosted SDK])
+
+|API key
+|Not required
+|Required
+
+|Network access
+|None — ever
+|One-time fetch per template (`GET /v1/sdk/template/{id}`), then cached and rendered in-process
+
+|Input
+|A template JSON file on disk (or an in-memory object)
+|A template ID — the SDK fetches the JSON for you
+
+|Best for
+|CI, air-gapped environments, or any setup where the template already exists as a file and a live Maildeno account isn't part of the picture
+|Apps where templates are managed in the hosted dashboard and referenced by ID at runtime
+|===
+
+They aren't mutually exclusive — see xref:opensource:overview.adoc#mix-and-match[Mix and match] on the Open Source overview page for ways to combine them.
+
+== Where to go next
+
+* xref:opensource:editor.adoc[`@maildeno/editor`] — produce the template JSON this package renders
+* xref:opensource:overview.adoc[Open Source overview] — how self-hosting relates to the hosted platform
+* https://github.com/maildeno/renderer-js[Source on GitHub]

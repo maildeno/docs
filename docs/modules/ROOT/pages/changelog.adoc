@@ -5,6 +5,21 @@ All notable changes to Maildeno are documented here. Maildeno follows https://se
 
 Entries are grouped by release date. Where multiple SDKs shipped the same change on the same day, they're listed together under one heading instead of being repeated per SDK; where SDKs shipped different changes on the same day, each gets its own subsection.
 
+== 2026-08-24
+
+**Maildeno Editor** · **Renderer** 
+
+=== The editor and renderer are now open source
+
+**@maildeno/editor v{editor-version}** · **@maildeno/renderer v{renderer-version}**
+
+==== Added
+
+* **`@maildeno/editor`** — the Maildeno drag-and-drop editor, extracted into a standalone, MIT-licensed package. Mount it as a Vue 3 component, or drop in `<maildeno-editor>` as a plain custom element with no framework on the host page at all. Fully functional with zero backend by default — templates, saved rows, and saved templates are stored via `localStorage`. An optional storage adapter connects it to Maildeno's hosted platform for template sync, team collaboration, and the image CDN.
+* **`@maildeno/renderer`** — a new, MIT-licensed npm package that renders a template JSON file to HTML, MJML, or React Email entirely offline. No API key, no network call, no Maildeno account. Reads the same template JSON format the hosted SDKs and REST API already use.
+
+See xref:opensource:overview.adoc[Open Source] for full documentation.
+
 == 2026-08-21
 
 **JavaScript/TypeScript v2.1.6** · **Python v2.0.6** · **PHP v1.0.3**
@@ -14,6 +29,7 @@ Entries are grouped by release date. Where multiple SDKs shipped the same change
 ==== Fixed
 
 **Menu and socials components – mobile padding override now properly applied.** The override logic was not being triggered on mobile breakpoints, causing custom padding values to be dropped. This has been corrected, ensuring the specified padding is consistently respected across all screen sizes for both menu and socials blocks.
+
 
 == 2026-08-02
 

@@ -3,6 +3,8 @@
 
 The Maildeno email builder is a visual, code-free environment for creating responsive email templates. Product and marketing teams use it to design emails; developers integrate the output via the Render API.
 
+NOTE: This page covers the *hosted* dashboard. Want to embed the same drag-and-drop editor directly in your own app instead — no Maildeno account required? See xref:opensource:editor.adoc[`@maildeno/editor`], the open-source, MIT-licensed editor package.
+
 image::canvas.PNG[Maildeno email builder main interface,role=center]
 
 == Builder sections

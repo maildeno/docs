@@ -1,0 +1,70 @@
+= Open Source
+:description: Maildeno's drag-and-drop editor and template renderer are open source and MIT-licensed. Self-host either one with zero Maildeno backend.
+
+[.lead]
+The same editor and rendering engine behind Maildeno are also available as open-source, MIT-licensed npm packages — no account, no API key, and no network access required.
+
+[cols="1,2,1", options=header]
+|===
+|Package|What it does|Version
+
+|`@maildeno/editor`
+|The drag-and-drop email editor as an embeddable component.
+|{editor-version}
+
+|`@maildeno/renderer`
+|Renders a template JSON file to HTML, MJML, or React Email — entirely offline.
+|{renderer-version}
+|===
+
+IMPORTANT: Both packages are fully functional with zero Maildeno backend — every export target, template storage, and version history work out of the box using the browser's `localStorage`. Connecting to Maildeno's hosted platform (cross-device template sync, team collaboration, an image CDN, send analytics) is entirely optional, and is a one-line change — swapping in a different storage adapter — if you decide you want it.
+
+== How this relates to the hosted product
+
+This site documents two ways to use Maildeno, and it's worth being explicit about which one each part of the sidebar covers:
+
+* **Open Source** (this section) covers the packages you run yourself. No dashboard, no API key, no data leaving your infrastructure unless you choose to connect it.
+* xref:builder:overview.adoc[**Email Builder**] and xref:sdk:overview.adoc[**SDK Reference**] cover the *hosted* platform — the dashboard at {dashboard-url} and the Render API/SDKs that talk to it. This path needs a Maildeno account and an API key.
+
+[.table-scroll, cols="1,2,2", options=header]
+|===
+| |Open source (self-hosted)|Maildeno (hosted)
+
+|Editor
+|`@maildeno/editor` embedded in your own app
+|Dashboard at {dashboard-url}
+
+|Template storage
+|`localStorage` by default (pluggable storage adapter)
+|Cloud sync, team collaboration, version history
+
+|Rendering
+|`@maildeno/renderer`, fully offline
+|Render API + SDKs (xref:sdk:javascript.adoc[JS], xref:sdk:python.adoc[Python], xref:sdk:php.adoc[PHP])
+
+|Images
+|Hosted wherever you already host assets
+|Built-in image CDN
+
+|Account / API key
+|Not required
+|Required
+
+|License / cost
+|MIT — free
+|Free tier, then paid plans
+|===
+
+== Mix and match
+
+The editor, the renderer, and the hosted Render API all read and write the same template JSON format, so you aren't locked into one path:
+
+* Design in the open-source xref:opensource:editor.adoc[editor], render locally with xref:opensource:renderer.adoc[`@maildeno/renderer`] — nothing ever touches Maildeno's servers.
+* Design in the open-source editor, but render with a hosted SDK by uploading the exported JSON through your own backend.
+* Design in the hosted dashboard, export the template as JSON, and render it offline with `@maildeno/renderer` — useful for CI, air-gapped environments, or just avoiding a runtime API call.
+
+== Where to go next
+
+* xref:opensource:editor.adoc[`@maildeno/editor`] — installation, mounting it as a Vue component or a framework-agnostic custom element, storage adapters, custom blocks
+* xref:opensource:renderer.adoc[`@maildeno/renderer`] — installation, the render API, and how it differs from the `maildeno` hosted SDK
+* Source and issues: https://github.com/maildeno/editor[`maildeno/editor`] and https://github.com/maildeno/renderer-js[`maildeno/renderer-js`] on GitHub

@@ -1,0 +1,5 @@
+// modules/opensource/nav.adoc
+* Open Source
+** xref:opensource:overview.adoc[Overview]
+** xref:opensource:editor.adoc[@maildeno/editor]
+** xref:opensource:renderer.adoc[@maildeno/renderer]

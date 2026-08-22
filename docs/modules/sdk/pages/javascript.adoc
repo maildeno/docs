@@ -10,6 +10,8 @@ npm install maildeno
 
 Requires Node.js 18+ (or any runtime with native `fetch` — Bun, Deno, Cloudflare Workers, browser via a server proxy).
 
+NOTE: Looking for offline rendering with no API key and no network call? That's a separate package — see xref:opensource:renderer.adoc[`@maildeno/renderer`].
+
 == Pages in this section
 
 * xref:js-installation.adoc[Installation {amp} Setup]

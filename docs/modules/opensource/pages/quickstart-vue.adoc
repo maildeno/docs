@@ -1,0 +1,101 @@
+= Vue 3
+:description: Embed @maildeno/editor in a Vue 3 app, either as the native component or through init().
+
+[.lead]
+`@maildeno/editor` is built on Vue 3, so a Vue host app gets first-class treatment: a native `<EmailEditor />` component with no extra wiring. This page also covers the `init()` path for apps that want the framework-agnostic API instead — useful if you're composing the editor with other custom elements, or want manual control over mount timing.
+
+== Installation
+
+[source,bash]
+----
+npm install @maildeno/editor
+----
+
+`vue` (`^3.4.0`) is a peer dependency and installs automatically — no separate step needed.
+
+== Option A: the native component
+
+Simplest path for a Vue 3 + `<script setup>` app:
+
+[source,vue]
+----
+<script setup lang="ts">
+import { EmailEditor } from "@maildeno/editor";
+</script>
+
+<template>
+  <EmailEditor :capabilities="{ export: ['html', 'react-email', 'mjml', 'json'] }" />
+</template>
+----
+
+Props map directly to the `init()` options below (`capabilities`, `theme`, `templateId`, `storageAdapter`, `onSendTestEmail`, and so on). Events map to the same names `handle.on()` uses, e.g. `@save="onSave"`.
+
+== Option B: init(), with full lifecycle control
+
+Use this when you need the `EditorHandle` directly — for example, calling `handle.getHtml()` from outside the component tree, or mounting into a container that isn't part of the Vue template.
+
+[source,vue]
+----
+<script setup lang="ts">
+import { onMounted, onBeforeUnmount, ref, nextTick } from "vue";
+import { init, type EditorHandle } from "@maildeno/editor/init";
+
+const container = ref<HTMLDivElement | null>(null);
+let handle: EditorHandle | null = null;
+
+onMounted(async () => {
+  await nextTick(); // ensure the ref is attached to the DOM first
+
+  if (!container.value) {
+    console.error("Maildeno editor container is not available");
+    return;
+  }
+
+  handle = await init({
+    container: container.value,
+    theme: {
+      primary: "#4a7c59",
+      primaryHover: "#3a5a40",
+    },
+  });
+
+  handle.on("save", ({ templateId }) => {
+    console.log("Saved:", templateId);
+    console.log(handle?.getHtml());
+  });
+});
+
+onBeforeUnmount(() => {
+  handle?.destroy();
+  handle = null;
+});
+</script>
+
+<template>
+  <div ref="container" style="height: 100vh" />
+</template>
+----
+
+The `nextTick()` before `init()` matters — `container.value` is `null` until Vue has committed the template ref to the DOM.
+
+== Sizing the container
+
+Give the container (or one of its ancestors) a resolved height:
+
+[source,css]
+----
+html, body, #app {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.editor-container {
+  min-height: 600px;
+}
+----
+
+== Where to go next
+
+* xref:opensource:guide-storage-adapters.adoc[Storage adapters] — connect `storageAdapter` to your own backend
+* xref:opensource:guide-test-email.adoc[Test email integration] — wire up `onSendTestEmail`
+* xref:opensource:editor.adoc[`@maildeno/editor` reference] — full `EditorHandle` API and customization options

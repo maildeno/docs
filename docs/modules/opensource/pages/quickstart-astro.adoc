@@ -1,0 +1,116 @@
+= Astro
+:description: Embed @maildeno/editor in an Astro page without needing a Vue island or any client framework.
+
+[.lead]
+Astro's `<script>` tags run once, client-side, as their own module — no framework, no hydration directives needed. That makes it one of the simplest hosts for `@maildeno/editor`: mount it the same way you would in plain HTML, and use data attributes to pass server-rendered values into the client script.
+
+== Installation
+
+[source,bash]
+----
+npm install @maildeno/editor
+----
+
+== Passing server values to the client script
+
+An Astro `<script>` block is compiled into its own bundle — it can't close over variables from the component's frontmatter. If the editor needs a value that only exists server-side (like a `templateId` from the route), pass it through a `data-*` attribute instead.
+
+[source,astro]
+----
+---
+// src/pages/editor/[templateId].astro
+const { templateId } = Astro.params;
+---
+
+<div id="editor" style="height: 100vh" data-template-id={templateId}></div>
+
+<button id="publish">Publish</button>
+
+<script>
+  import { init } from "@maildeno/editor/init";
+
+  const el = document.getElementById("editor")!;
+
+  const handle = await init({
+    container: el,
+    templateId: el.dataset.templateId || undefined,
+    theme: { primaryColor: "#6366f1" },
+    capabilities: { export: ["html", "json"] },
+    onSendTestEmail: async ({ to, subject, html }) => {
+      const response = await fetch("/api/send-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to, subject, html }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || "Failed to send test email");
+      }
+    },
+  });
+
+  handle.on("save", ({ templateId }) => {
+    // Keep the URL in sync with the saved template, without a reload.
+    history.replaceState(null, "", `/editor/${templateId}`);
+  });
+
+  document.getElementById("publish")?.addEventListener("click", async () => {
+    const html = handle.getHtml();
+    if (!html) return; // empty canvas
+    await fetch("/api/campaigns", { method: "POST", body: JSON.stringify({ html }) });
+  });
+</script>
+----
+
+Throwing inside `onSendTestEmail` (rather than swallowing the error) matters here — it's what lets the editor's own UI surface a failed send to the person using it, instead of failing silently.
+
+== The send-test API route
+
+[source,typescript]
+----
+// src/pages/api/send-test.ts
+export const prerender = false;
+
+import { sendTestEmail } from "../../lib/postmark";
+
+export async function POST({ request }: { request: Request }) {
+  try {
+    const { to, subject, html } = await request.json();
+
+    const messageId = await sendTestEmail({
+      to,
+      subject,
+      html,
+      from: "Maildeno <preview@maildeno.com>",
+    });
+
+    return new Response(JSON.stringify({ success: true, messageId }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Failed to send test email:", error);
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+}
+----
+
+`export const prerender = false` is required — API routes that touch request bodies or secrets need to opt out of Astro's static prerendering. See xref:opensource:guide-test-email.adoc[Test email integration] for what `../../lib/postmark` looks like.
+
+== Why no framework directive
+
+If you've used React or Vue islands in Astro before, you might expect a `client:load` directive here. You don't need one — `@maildeno/editor/init` isn't an Astro component, it's a plain function called from a `<script>` tag, so there's no island to hydrate.
+
+== Where to go next
+
+* xref:opensource:guide-storage-adapters.adoc[Storage adapters] — persist templates and images through an Astro API route
+* xref:opensource:guide-test-email.adoc[Test email integration] — the full `sendTestEmail` implementation
+* xref:opensource:editor.adoc[`@maildeno/editor` reference] — full `EditorHandle` API

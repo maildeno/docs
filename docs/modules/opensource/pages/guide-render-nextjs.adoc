@@ -1,0 +1,84 @@
+= Next.js (Route Handlers)
+:description: Render Maildeno templates to HTML from a Next.js App Router Route Handler, and why it must run on the Node.js runtime rather than Edge.
+
+[.lead]
+This page is about rendering a saved template server-side with `@maildeno/renderer`. If you're looking to mount the *editor* in a Next.js page instead, see xref:opensource:quickstart-nextjs.adoc[the Next.js editor guide].
+
+== Installation
+
+[source,bash]
+----
+npm install @maildeno/renderer
+----
+
+== Why this needs the Node.js runtime
+
+`@maildeno/renderer` reads `engine.wasm` from disk via `node:fs`. Next.js Route Handlers can run on either the Node.js runtime or the Edge runtime, and only the Node.js runtime has filesystem access — so this route needs to opt out of Edge explicitly if your project's defaults lean that way:
+
+[source,typescript]
+----
+export const runtime = "nodejs"; // default, but explicit is cheap insurance
+----
+
+== A render route
+
+[source,typescript]
+----
+// app/api/render/route.ts
+import { NextResponse } from "next/server";
+import { render, RenderError } from "@maildeno/renderer";
+
+export const runtime = "nodejs";
+
+export async function POST(request: Request) {
+  const { templateId, mergeTags, context } = await request.json();
+
+  try {
+    const html = await render(`${templateId}.json`, {
+      baseDir: process.env.TEMPLATE_DIR,
+      mergeTags,
+      context,
+    });
+
+    return NextResponse.json({ html });
+  } catch (err) {
+    if (err instanceof RenderError) {
+      const status = err.code === "TEMPLATE_NOT_FOUND" ? 404 : err.code === "INVALID_TEMPLATE" ? 400 : 500;
+      return NextResponse.json({ error: err.code, message: err.message }, { status });
+    }
+
+    console.error(err);
+    return NextResponse.json({ error: "RENDER_FAILED" }, { status: 500 });
+  }
+}
+----
+
+== Deploying: make sure the template files ship with the function
+
+If templates live as JSON files in your repo rather than a database, Vercel's file tracing needs to know to include them in the deployed function bundle — files outside what Next.js can statically detect as imported aren't picked up automatically.
+
+[source,javascript]
+----
+// next.config.js
+module.exports = {
+  outputFileTracingIncludes: {
+    "/api/render/route": ["./templates/**/*.json"],
+  },
+};
+----
+
+If templates are stored in a database or object storage instead, this doesn't apply — fetch the record and pass the parsed object straight to `render()`:
+
+[source,typescript]
+----
+const template = await db.templates.findById(templateId); // already-parsed JSON
+const html = await render(template, { mergeTags, context });
+----
+
+`render()` accepts either a file path or an already-parsed template object, so this sidesteps the file-bundling question entirely — usually the simpler option once templates aren't just static files in the repo.
+
+== Where to go next
+
+* xref:opensource:guide-render-backend.adoc[Server-side rendering] — `mergeTags`/`context`, `baseDir` as a security boundary, and the render-then-send pattern
+* xref:opensource:guide-test-email.adoc[Test email integration] — sending the rendered HTML
+* xref:opensource:renderer.adoc[`@maildeno/renderer` reference] — full API

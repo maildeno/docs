@@ -1,0 +1,135 @@
+= Test Email Integration
+:description: Wire up onSendTestEmail so users can send a test render of their template, without giving the browser your provider credentials.
+
+[.lead]
+`@maildeno/editor` doesn't send email — it hands your app a rendered payload and lets your server do the sending. That split means your provider credentials never reach the browser, and you can swap providers without touching the editor integration at all.
+
+== The contract
+
+Every framework guide in this section wires up the same option:
+
+[source,typescript]
+----
+const handle = await init({
+  container: "#editor",
+  onSendTestEmail: async ({ to, subject, html }) => {
+    const response = await fetch("/api/send-test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to, subject, html }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to send test email");
+    }
+  },
+});
+----
+
+TIP: Throw (or reject) on failure rather than swallowing it. The editor's own UI uses that to show the send as failed — a silently-resolved promise looks identical to a successful send from the editor's point of view.
+
+That callback is the entire client-side contract. Everything below is the `/api/send-test` endpoint it's calling.
+
+== Backend: Postmark
+
+[source,typescript]
+----
+// lib/postmark.ts
+const POSTMARK_API_URL = "https://api.postmarkapp.com/email";
+
+export async function sendTestEmail({ to, subject, html, from }) {
+  const token = process.env.POSTMARK_SERVER_TOKEN;
+
+  if (!token) {
+    throw new Error("POSTMARK_SERVER_TOKEN is required");
+  }
+
+  const response = await fetch(POSTMARK_API_URL, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Postmark-Server-Token": token,
+    },
+    body: JSON.stringify({
+      From: from,
+      To: to,
+      Subject: subject,
+      HtmlBody: html,
+      MessageStream: "outbound",
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Postmark HTTP ${response.status}: ${text}`);
+  }
+
+  const data = await response.json();
+  return data.MessageID || "";
+}
+----
+
+IMPORTANT: Read the token from `process.env`, not a literal in source. A hardcoded token check like `if (!token) throw ...` is dead code if `token` is already a string literal a few lines above — worth double-checking if you're adapting this from an older snippet.
+
+Route handler (framework-agnostic Node/Express shape — see each quickstart guide for the exact syntax in Next.js, Nuxt, SvelteKit, or Astro):
+
+[source,typescript]
+----
+// routes/send-test.ts
+import { sendTestEmail } from "../lib/postmark";
+
+export async function POST({ request }: { request: Request }) {
+  try {
+    const { to, subject, html } = await request.json();
+
+    const messageId = await sendTestEmail({
+      to,
+      subject,
+      html,
+      from: "Your App <preview@yourapp.com>",
+    });
+
+    return new Response(JSON.stringify({ success: true, messageId }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Failed to send test email:", error);
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+}
+----
+
+== Swapping in another provider
+
+Only `sendTestEmail()` changes — the route handler and the client-side `onSendTestEmail` stay identical. Resend, for comparison:
+
+[source,typescript]
+----
+// lib/resend.ts
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+export async function sendTestEmail({ to, subject, html, from }) {
+  const { data, error } = await resend.emails.send({ from, to, subject, html });
+  if (error) throw new Error(error.message);
+  return data?.id ?? "";
+}
+----
+
+SendGrid and SES follow the same shape: accept `{ to, subject, html, from }`, return a message ID, throw on failure. Keeping that signature consistent means the rest of your app — including anything built from the framework guides in this section — never needs to know which provider is behind it.
+
+== Where to go next
+
+* xref:opensource:guide-storage-adapters.adoc[Storage adapters] — persist templates and images
+* xref:opensource:guide-render-backend.adoc[Server-side rendering] — render a template to HTML for a real (non-test) send
+* xref:opensource:editor.adoc[`@maildeno/editor` reference] — full `EditorHandle` API

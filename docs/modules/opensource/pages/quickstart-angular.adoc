@@ -1,0 +1,75 @@
+= Angular
+:description: Embed @maildeno/editor in an Angular app using a ViewChild container and the AfterViewInit/OnDestroy lifecycle.
+
+[.lead]
+Angular's component lifecycle maps cleanly onto `init()`/`destroy()`: mount in `ngAfterViewInit`, once the template's `ViewChild` is guaranteed to exist, and tear down in `ngOnDestroy`.
+
+== Installation
+
+[source,bash]
+----
+npm install @maildeno/editor
+----
+
+== The editor component
+
+[source,typescript]
+----
+// editor.component.ts
+import {
+  Component,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  OnDestroy,
+} from "@angular/core";
+import { init, type EditorHandle } from "@maildeno/editor/init";
+import { HttpClient } from "@angular/common/http";
+
+@Component({
+  selector: "app-email-editor",
+  standalone: true,
+  template: `<div #container style="height: 100vh"></div>`,
+})
+export class EmailEditorComponent implements AfterViewInit, OnDestroy {
+  @ViewChild("container") containerRef!: ElementRef<HTMLDivElement>;
+  private handle: EditorHandle | null = null;
+
+  constructor(private http: HttpClient) {}
+
+  async ngAfterViewInit(): Promise<void> {
+    this.handle = await init({
+      container: this.containerRef.nativeElement,
+      capabilities: { export: ["html", "mjml", "json"] },
+      onSendTestEmail: async ({ to, subject, html }) => {
+        await fetch("/api/send-test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to, subject, html }),
+        });
+      },
+    });
+
+    this.handle.on("save", ({ templateId }) => {
+      console.log("saved:", templateId);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.handle?.destroy();
+    this.handle = null;
+  }
+}
+----
+
+`ViewChild` isn't resolved until after the first change-detection pass, which is exactly what `AfterViewInit` guarantees — mounting any earlier would hit a `null` container.
+
+== A note on zones
+
+`@maildeno/editor` manages its own internal Vue reactivity inside a shadow root; it doesn't run through Angular's change detection, and it doesn't need to. You generally won't need `NgZone.runOutsideAngular()` here — the editor isn't triggering Angular change-detection cycles on every internal keystroke the way, say, a manually-driven third-party chart redraw might.
+
+== Where to go next
+
+* xref:opensource:guide-storage-adapters.adoc[Storage adapters] — persist templates and images through an Angular service
+* xref:opensource:guide-test-email.adoc[Test email integration] — the full send-test pattern
+* xref:opensource:editor.adoc[`@maildeno/editor` reference] — full `EditorHandle` API

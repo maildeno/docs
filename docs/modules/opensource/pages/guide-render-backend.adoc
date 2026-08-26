@@ -1,0 +1,151 @@
+= Server-Side Rendering
+:description: Render a template to HTML on your backend with @maildeno/renderer, and send it through a real email provider.
+
+[.lead]
+xref:opensource:guide-test-email.adoc[Test email integration] covers sending the editor's live preview. This page covers the other case: rendering a saved template JSON file to HTML on your server — for a scheduled send, a transactional email, or a campaign — using `@maildeno/renderer` instead of the editor's in-browser export.
+
+The example below uses Express. The concepts on this page — `mergeTags`/`context`, `baseDir` as a security boundary, and the render-then-send pattern — apply the same way regardless of framework; if you're on one of these instead, jump straight there:
+
+[cols="1,3", options=header]
+|===
+|Framework|Guide
+
+|NestJS
+|xref:opensource:guide-render-nestjs.adoc[NestJS]
+
+|Fastify
+|xref:opensource:guide-render-fastify.adoc[Fastify]
+
+|Next.js (Route Handlers)
+|xref:opensource:guide-render-nextjs.adoc[Next.js]
+
+|AWS Lambda / serverless
+|xref:opensource:guide-render-serverless.adoc[Serverless]
+|===
+
+== Installation
+
+[source,bash]
+----
+npm install @maildeno/renderer
+----
+
+See xref:opensource:renderer.adoc[the `@maildeno/renderer` reference] for the supported Node.js version and full API.
+
+[#runtimes]
+== A note on runtimes
+
+`@maildeno/renderer` reads `engine.wasm` from disk via `node:fs`. It runs anywhere with real Node.js filesystem access — a standard server process, a container, a Node.js Lambda function — and it does *not* run on edge/isolate runtimes without filesystem access (Cloudflare Workers, Vercel/Next.js Edge Runtime, Deno Deploy without a Node compatibility layer). See xref:opensource:guide-render-serverless.adoc#which-runtimes-this-works-on[the serverless guide's runtime table] for the full picture.
+
+== A minimal Express route
+
+[source,typescript]
+----
+import express, { Request, Response } from "express";
+import { render, RenderError } from "@maildeno/renderer";
+import { config } from "dotenv";
+
+config({ path: "./.env" });
+
+const app = express();
+app.use(express.json());
+
+app.post("/render", async (req: Request, res: Response) => {
+  const { templateId, mergeTags, context } = req.body;
+
+  try {
+    const html = await render(`templates/${templateId}.json`, {
+      baseDir: process.env.TEMPLATE_DIR, // see "Untrusted template paths" below
+      mergeTags,
+      context,
+    });
+
+    return res.json({ html });
+  } catch (err) {
+    if (err instanceof RenderError) {
+      console.error(err.code, err.message);
+      return res.status(err.code === "TEMPLATE_NOT_FOUND" ? 404 : 400).json({
+        error: err.code,
+        message: err.message,
+      });
+    }
+
+    console.error(err);
+    return res.status(500).json({ error: "RENDER_FAILED" });
+  }
+});
+
+app.listen(process.env.PORT, () => {
+  console.log(`Server running at port ${process.env.PORT}…`);
+});
+----
+
+Two things worth calling out relative to a naive first draft: the `catch` block actually sends a response for every code path (an empty `catch` that only logs leaves the request hanging with no status and no body), and `RenderError` codes map to distinct HTTP statuses rather than a blanket 500.
+
+== Untrusted template paths
+
+If `templateId` — or any part of the path passed to `render()` — comes from a request rather than a value you control, set `baseDir` explicitly:
+
+[source,typescript]
+----
+await render(`${templateId}.json`, {
+  baseDir: "/srv/app/templates",
+});
+----
+
+`baseDir` isn't just a convenience default — it's a boundary. `@maildeno/renderer` compares resolved paths rather than scanning the input for `..`, so it also catches encoded traversal sequences and symlink tricks, not just the literal `../` case.
+
+== mergeTags and context
+
+`mergeTags` groups are escaped differently depending on where they're substituted — a URL placed under `text` is HTML-escaped rather than URL-encoded, which will break on any value containing `&`.
+
+[source,typescript]
+----
+await render("templates/welcome.json", {
+  mergeTags: {
+    text: { first_name: user.firstName, plan: user.plan }, // visible text
+    url: { cta: `https://app.example.com/onboarding?u=${user.id}` }, // href/src
+    attr: { hero_alt: "Product screenshot" }, // attribute values
+  },
+  context: { plan: user.plan, is_trial: user.isTrial }, // visibility rules
+});
+----
+
+`context` isn't rendered as text anywhere — it's only used to decide which conditionally-visible rows or blocks are included in the output.
+
+== End to end: render, then send
+
+Combining this with xref:opensource:guide-test-email.adoc[the test-email pattern] gives you a full "render a saved template for a real recipient" flow:
+
+[source,typescript]
+----
+import { render } from "@maildeno/renderer";
+import { sendTestEmail as sendEmail } from "./lib/postmark"; // same {to, subject, html, from} shape
+
+export async function sendWelcome(user: User) {
+  const html = await render("templates/welcome.json", {
+    baseDir: process.env.TEMPLATE_DIR,
+    mergeTags: {
+      text: { first_name: user.firstName, plan: user.plan },
+      url: { cta: `https://app.example.com/onboarding?u=${user.id}` },
+    },
+    context: { plan: user.plan, is_trial: user.isTrial },
+  });
+
+  await sendEmail({
+    to: user.email,
+    subject: `Welcome, ${user.firstName}`,
+    html,
+    from: "Your App <hello@yourapp.com>",
+  });
+}
+----
+
+Rendering is local, synchronous WebAssembly work — no rate limits, nothing to mock in tests, and safe to call in a loop per recipient.
+
+== Where to go next
+
+* xref:opensource:guide-render-nestjs.adoc[NestJS], xref:opensource:guide-render-fastify.adoc[Fastify], xref:opensource:guide-render-nextjs.adoc[Next.js], or xref:opensource:guide-render-serverless.adoc[Serverless] — the same pattern in other backend frameworks
+* xref:opensource:renderer.adoc[`@maildeno/renderer` reference] — full API, error codes, and how it compares to the hosted SDK
+* xref:opensource:guide-test-email.adoc[Test email integration] — the `sendEmail`/provider side of the flow above
+* xref:opensource:guide-storage-adapters.adoc[Storage adapters] — where the template JSON these routes read usually comes from

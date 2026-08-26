@@ -1,0 +1,163 @@
+= Storage Adapters
+:description: Connect @maildeno/editor to your own backend for templates and images, including a full S3 image-upload example.
+
+[.lead]
+By default `@maildeno/editor` persists templates to `localStorage` — enough for a demo, not for a real application. A storage adapter replaces that with calls to your own API. You implement only the methods you actually need; anything you omit falls back to the built-in default.
+
+== The adapter shape
+
+[source,typescript]
+----
+interface StorageAdapter {
+  loadTemplate?(templateId: string): Promise<Template | null>;
+  saveTemplate?(snapshot: Template, templateId?: string): Promise<void>;
+  uploadImage?(file: File): Promise<string>; // returns a public URL
+}
+----
+
+Pass it at mount time:
+
+[source,typescript]
+----
+const handle = await init({
+  container: "#editor",
+  storageAdapter: {
+    async loadTemplate(templateId) {
+      const response = await fetch(`/api/templates/${templateId}`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+
+    async saveTemplate(snapshot, templateId) {
+      await fetch(`/api/templates/${templateId ?? ""}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(snapshot),
+      });
+    },
+
+    uploadImage: myAdapter.uploadImage,
+  },
+});
+----
+
+The editor never needs to know what's behind these calls — your database, an S3 bucket, a CMS, whatever fits your stack.
+
+== Image uploads: a full S3 example
+
+`uploadImage(file)` receives whatever the user drops or picks in the editor, and must resolve to a public URL the rendered email can reference.
+
+[source,typescript]
+----
+// lib/s3.ts
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+const REGION = import.meta.env.VITE_AWS_REGION;
+const BUCKET = import.meta.env.VITE_S3_BUCKET_NAME;
+
+const s3 = new S3Client({
+  region: REGION,
+  credentials: {
+    accessKeyId: import.meta.env.VITE_AWS_ACCESS_KEY_ID,
+    secretAccessKey: import.meta.env.VITE_AWS_SECRET_ACCESS_KEY,
+  },
+  // Newer SDK versions default checksum calculation to "WHEN_SUPPORTED",
+  // which streams the body to compute a checksum — a path that breaks in
+  // some browser bundlers. PutObject doesn't require one, so pin this to
+  // only compute a checksum when the API actually demands it.
+  requestChecksumCalculation: "WHEN_REQUIRED",
+});
+
+export async function uploadFileToS3(file: File): Promise<string> {
+  const key = `editor-images/${crypto.randomUUID()}-${file.name}`;
+
+  // Read into bytes up front. Passing the raw File/Blob as `Body` triggers
+  // the SDK's automatic streaming checksum path, which throws
+  // "readableStream.getReader is not a function" in some browser bundlers.
+  // A plain Uint8Array sidesteps that entirely.
+  const fileBytes = new Uint8Array(await file.arrayBuffer());
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: fileBytes,
+      ContentType: file.type,
+    }),
+  );
+
+  return `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
+}
+----
+
+[source,typescript]
+----
+// lib/adapter.ts
+import { uploadFileToS3 } from "./s3";
+
+export const myAdapter = {
+  async uploadImage(file: File) {
+    return uploadFileToS3(file);
+  },
+};
+----
+
+WARNING: The example above puts AWS credentials in the browser bundle. That's fine for local testing against a locked-down test bucket and a scoped-down IAM user — it is *not* something to ship to production. Anyone can read `VITE_AWS_ACCESS_KEY_ID`/`VITE_AWS_SECRET_ACCESS_KEY` straight out of your JS bundle.
+
+== Production: presigned URLs
+
+The safe version keeps credentials on your server. Your backend signs a short-lived, single-use upload URL; the browser uploads directly to S3 using that URL and never sees a credential.
+
+[source,typescript]
+----
+// server: presign endpoint
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+const s3 = new S3Client({ region: process.env.AWS_REGION });
+
+export async function POST(request: Request) {
+  const { filename, contentType } = await request.json();
+  const key = `editor-images/${crypto.randomUUID()}-${filename}`;
+
+  const url = await getSignedUrl(
+    s3,
+    new PutObjectCommand({
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: key,
+      ContentType: contentType,
+    }),
+    { expiresIn: 60 }, // seconds
+  );
+
+  const publicUrl = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  return Response.json({ uploadUrl: url, publicUrl });
+}
+----
+
+[source,typescript]
+----
+// client: storage adapter
+async function uploadImage(file: File): Promise<string> {
+  const presign = await fetch("/api/uploads/presign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filename: file.name, contentType: file.type }),
+  }).then((r) => r.json());
+
+  await fetch(presign.uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": file.type },
+    body: file,
+  });
+
+  return presign.publicUrl;
+}
+----
+
+Swap the S3 calls for whatever object storage you use (Cloudflare R2, GCS, Supabase Storage) — the shape is the same: sign server-side, upload directly from the browser, hand the editor back a plain URL.
+
+== Where to go next
+
+* xref:opensource:editor.adoc[`@maildeno/editor` reference] — full storage adapter surface, including saved rows and version history
+* xref:opensource:guide-test-email.adoc[Test email integration] — the other half of a production setup

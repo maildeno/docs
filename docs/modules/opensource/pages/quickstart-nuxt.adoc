@@ -1,0 +1,114 @@
+= Nuxt
+:description: Embed @maildeno/editor's native Vue component in a Nuxt app without triggering server-render errors.
+
+[.lead]
+`@maildeno/editor`'s `<EmailEditor />` is a real Vue 3 component, so it drops into Nuxt directly — but Nuxt server-renders every page by default, and the editor has no server-safe render path. The fix is to keep it client-only.
+
+== Installation
+
+[source,bash]
+----
+npm install @maildeno/editor
+----
+
+== Option A: `<ClientOnly>`
+
+The simplest approach — Nuxt's built-in `<ClientOnly>` skips a component during SSR and mounts it after hydration:
+
+[source,vue]
+----
+<template>
+  <ClientOnly>
+    <EmailEditor :capabilities="{ export: ['html', 'mjml', 'json'] }" />
+    <template #fallback>
+      <div style="height: 100vh; display: flex; align-items: center; justify-content: center;">
+        Loading editor…
+      </div>
+    </template>
+  </ClientOnly>
+</template>
+
+<script setup lang="ts">
+import { EmailEditor } from "@maildeno/editor";
+</script>
+----
+
+== Option B: init(), for manual control
+
+If you need the `EditorHandle` directly, the pattern is the same as plain Vue — `onMounted` only ever runs client-side in Nuxt, even under SSR, so no extra guard is required inside it:
+
+[source,vue]
+----
+<template>
+  <div ref="container" style="height: 100vh" />
+</template>
+
+<script setup lang="ts">
+import { onMounted, onBeforeUnmount, ref } from "vue";
+import type { EditorHandle } from "@maildeno/editor/init";
+
+const container = ref<HTMLDivElement | null>(null);
+let handle: EditorHandle | null = null;
+
+onMounted(async () => {
+  // Import inside onMounted so the module (and its DOM/shadow-root usage)
+  // is never evaluated during Nuxt's server render.
+  const { init } = await import("@maildeno/editor/init");
+
+  handle = await init({
+    container: container.value!,
+    onSendTestEmail: async ({ to, subject, html }) => {
+      await $fetch("/api/send-test", {
+        method: "POST",
+        body: { to, subject, html },
+      });
+    },
+  });
+
+  handle.on("save", ({ templateId }) => console.log("saved:", templateId));
+});
+
+onBeforeUnmount(() => handle?.destroy());
+</script>
+----
+
+The dynamic `import()` is the important difference from a plain Vue app: it defers evaluating `@maildeno/editor/init` until the component has actually mounted in the browser, so Nuxt's server build never touches it.
+
+== The send-test server route
+
+[source,typescript]
+----
+// server/api/send-test.post.ts
+export default defineEventHandler(async (event) => {
+  const { to, subject, html } = await readBody(event);
+
+  const res = await fetch("https://api.postmarkapp.com/email", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Postmark-Server-Token": process.env.POSTMARK_SERVER_TOKEN!,
+    },
+    body: JSON.stringify({
+      From: "Your App <preview@yourapp.com>",
+      To: to,
+      Subject: subject,
+      HtmlBody: html,
+      MessageStream: "outbound",
+    }),
+  });
+
+  if (!res.ok) {
+    throw createError({ statusCode: 502, statusMessage: await res.text() });
+  }
+
+  const data = await res.json();
+  return { success: true, messageId: data.MessageID };
+});
+----
+
+== Where to go next
+
+* xref:opensource:quickstart-vue.adoc[Vue 3] — the underlying component and `init()` API, without Nuxt's SSR constraints
+* xref:opensource:guide-test-email.adoc[Test email integration] — the full send-test pattern
+* xref:opensource:editor.adoc[`@maildeno/editor` reference] — full `EditorHandle` API

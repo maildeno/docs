@@ -1,0 +1,88 @@
+= React
+:description: Embed @maildeno/editor in a React app using init() and a container ref.
+
+[.lead]
+`@maildeno/editor` doesn't ship a React component — it doesn't need to. `init()` mounts a self-contained custom element into any container you give it, so a small `useRef` + `useEffect` wrapper is all React-side integration takes.
+
+NOTE: This page covers plain React (Vite, CRA, or any client-rendered setup). For Next.js specifically, see xref:opensource:quickstart-nextjs.adoc[Next.js] — server rendering changes where the mount code is allowed to run.
+
+== Installation
+
+[source,bash]
+----
+npm install @maildeno/editor
+----
+
+== The editor component
+
+[source,tsx]
+----
+import { useEffect, useRef } from "react";
+import { init, type EditorHandle } from "@maildeno/editor/init";
+
+export default function Editor() {
+  const container = useRef<HTMLDivElement>(null);
+  const handle = useRef<EditorHandle | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    init({
+      container: container.current!,
+      capabilities: { export: ["html", "mjml", "json"] },
+      onSendTestEmail: async ({ to, subject, html }) => {
+        await fetch("/api/send-test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to, subject, html }),
+        });
+      },
+    }).then((h) => {
+      // React 18 StrictMode mounts effects twice in development. Without
+      // this guard the first instance is orphaned and never destroyed.
+      if (cancelled) {
+        h.destroy();
+        return;
+      }
+      handle.current = h;
+      h.on("save", ({ templateId }) => console.log("saved:", templateId));
+    });
+
+    return () => {
+      cancelled = true;
+      handle.current?.destroy();
+      handle.current = null;
+    };
+  }, []);
+
+  return <div ref={container} style={{ height: "100vh" }} />;
+}
+----
+
+The `cancelled` flag is the important part. In development, `StrictMode` runs the effect, cleans it up, then runs it again — without the guard you'd end up with two editors racing to occupy the same container, and the first `handle` reference would leak.
+
+== Reading exported output
+
+Anything triggered from outside the component (a "Publish" button elsewhere in your app, for instance) just calls through the ref:
+
+[source,tsx]
+----
+function PublishButton({ editorHandle }: { editorHandle: React.RefObject<EditorHandle | null> }) {
+  const publish = async () => {
+    const html = editorHandle.current?.getHtml();
+    if (!html) return; // empty canvas
+    await fetch("/api/campaigns", {
+      method: "POST",
+      body: JSON.stringify({ html }),
+    });
+  };
+
+  return <button onClick={publish}>Publish</button>;
+}
+----
+
+== Where to go next
+
+* xref:opensource:guide-storage-adapters.adoc[Storage adapters] — persist templates and images to your own backend
+* xref:opensource:guide-test-email.adoc[Test email integration] — implement `/api/send-test`
+* xref:opensource:editor.adoc[`@maildeno/editor` reference] — full `EditorHandle` API

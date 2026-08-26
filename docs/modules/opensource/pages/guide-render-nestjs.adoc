@@ -1,0 +1,106 @@
+= NestJS
+:description: Render Maildeno templates to HTML inside a NestJS service, with RenderError mapped to proper HTTP exceptions.
+
+[.lead]
+`@maildeno/renderer` is a plain async function — no special NestJS wiring needed beyond wrapping it in a service and translating `RenderError` into Nest's exception types.
+
+== Installation
+
+[source,bash]
+----
+npm install @maildeno/renderer
+----
+
+Requires the Node.js runtime — see xref:opensource:guide-render-backend.adoc#runtimes[a note on runtimes] if you're deploying anywhere other than a standard Node process.
+
+== A render service
+
+[source,typescript]
+----
+// render/render.service.ts
+import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from "@nestjs/common";
+import { render, RenderError } from "@maildeno/renderer";
+
+export interface RenderTemplateInput {
+  templateId: string;
+  mergeTags?: Record<string, Record<string, string>>;
+  context?: Record<string, string | number | boolean>;
+}
+
+@Injectable()
+export class RenderService {
+  private readonly baseDir = process.env.TEMPLATE_DIR ?? "templates";
+
+  async renderTemplate({ templateId, mergeTags, context }: RenderTemplateInput): Promise<string> {
+    try {
+      return await render(`${templateId}.json`, {
+        baseDir: this.baseDir,
+        mergeTags,
+        context,
+      });
+    } catch (err) {
+      if (err instanceof RenderError) {
+        switch (err.code) {
+          case "TEMPLATE_NOT_FOUND":
+            throw new NotFoundException(err.message);
+          case "INVALID_TEMPLATE":
+            throw new BadRequestException(err.message);
+          case "RENDER_ERROR":
+          default:
+            throw new InternalServerErrorException(err.message);
+        }
+      }
+      throw new InternalServerErrorException("RENDER_FAILED");
+    }
+  }
+}
+----
+
+`baseDir` is set once, from configuration, rather than trusted per-request — `templateId` on its own can't escape that directory even if it contains `../` or an encoded traversal sequence.
+
+== The controller
+
+[source,typescript]
+----
+// render/render.controller.ts
+import { Body, Controller, Post } from "@nestjs/common";
+import { RenderService, RenderTemplateInput } from "./render.service";
+
+@Controller("render")
+export class RenderController {
+  constructor(private readonly renderService: RenderService) {}
+
+  @Post()
+  async render(@Body() body: RenderTemplateInput) {
+    const html = await this.renderService.renderTemplate(body);
+    return { html };
+  }
+}
+----
+
+Add a DTO with `class-validator` decorators in place of the plain interface if you want request-shape validation before `templateId` ever reaches the service — not shown here since it's identical to any other Nest endpoint.
+
+== Module wiring
+
+[source,typescript]
+----
+// render/render.module.ts
+import { Module } from "@nestjs/common";
+import { RenderController } from "./render.controller";
+import { RenderService } from "./render.service";
+
+@Module({
+  controllers: [RenderController],
+  providers: [RenderService],
+  exports: [RenderService],
+})
+export class RenderModule {}
+----
+
+Exporting `RenderService` lets other modules — a mailer module that sends the rendered HTML through Postmark or Resend, for instance — inject it directly instead of going through HTTP internally.
+
+== Where to go next
+
+* xref:opensource:guide-render-backend.adoc[Server-side rendering] — the framework-agnostic core: `mergeTags`/`context`, error codes, and the render-then-send pattern
+* xref:opensource:guide-test-email.adoc[Test email integration] — sending the HTML this service produces
+* xref:opensource:renderer.adoc[`@maildeno/renderer` reference] — full API

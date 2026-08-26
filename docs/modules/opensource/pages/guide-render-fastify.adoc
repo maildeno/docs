@@ -1,0 +1,83 @@
+= Fastify
+:description: Render Maildeno templates to HTML from a Fastify route, with RenderError mapped to reply status codes.
+
+[.lead]
+Same core call as everywhere else in this section — `render()` wrapped in `try`/`catch`, with `RenderError.code` deciding the response status.
+
+== Installation
+
+[source,bash]
+----
+npm install @maildeno/renderer
+----
+
+== A render plugin
+
+[source,typescript]
+----
+// plugins/render.ts
+import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { render, RenderError } from "@maildeno/renderer";
+
+interface RenderBody {
+  templateId: string;
+  mergeTags?: Record<string, Record<string, string>>;
+  context?: Record<string, string | number | boolean>;
+}
+
+const STATUS_BY_CODE: Record<string, number> = {
+  TEMPLATE_NOT_FOUND: 404,
+  INVALID_TEMPLATE: 400,
+  RENDER_ERROR: 500,
+};
+
+export async function renderRoutes(app: FastifyInstance) {
+  app.post(
+    "/render",
+    async (request: FastifyRequest<{ Body: RenderBody }>, reply: FastifyReply) => {
+      const { templateId, mergeTags, context } = request.body;
+
+      try {
+        const html = await render(`${templateId}.json`, {
+          baseDir: process.env.TEMPLATE_DIR,
+          mergeTags,
+          context,
+        });
+
+        return { html };
+      } catch (err) {
+        if (err instanceof RenderError) {
+          request.log.warn({ code: err.code }, err.message);
+          return reply.code(STATUS_BY_CODE[err.code] ?? 500).send({
+            error: err.code,
+            message: err.message,
+          });
+        }
+
+        request.log.error(err);
+        return reply.code(500).send({ error: "RENDER_FAILED" });
+      }
+    },
+  );
+}
+----
+
+== Registering it
+
+[source,typescript]
+----
+// app.ts
+import Fastify from "fastify";
+import { renderRoutes } from "./plugins/render";
+
+const app = Fastify({ logger: true });
+app.register(renderRoutes);
+
+app.listen({ port: Number(process.env.PORT ?? 3000) });
+----
+
+== Where to go next
+
+* xref:opensource:guide-render-backend.adoc[Server-side rendering] — `mergeTags`/`context`, `baseDir` as a security boundary, and the render-then-send pattern
+* xref:opensource:guide-test-email.adoc[Test email integration] — sending the rendered HTML
+* xref:opensource:renderer.adoc[`@maildeno/renderer` reference] — full API

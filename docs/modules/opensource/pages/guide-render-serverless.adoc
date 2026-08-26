@@ -1,0 +1,88 @@
+= Serverless (AWS Lambda)
+:description: Run @maildeno/renderer inside an AWS Lambda function, and which serverless runtimes it can't run on.
+
+[.lead]
+`@maildeno/renderer` runs fine in a standard Lambda Node.js function — it's local WebAssembly work with no network calls, which is exactly the shape serverless rendering wants. The two things to get right are the runtime (Node, not an edge/isolate runtime) and where the template JSON comes from.
+
+[#which-runtimes-this-works-on]
+== Which runtimes this works on
+
+`@maildeno/renderer` reads `engine.wasm` from disk via `node:fs`. That rules out anything without real filesystem access:
+
+[cols="1,2", options=header]
+|===
+|Runtime|Works?
+
+|AWS Lambda (Node.js runtime)
+|Yes
+
+|AWS Lambda (`provided.al2`, custom runtime)
+|Yes, as long as `node:fs` is available in your custom setup
+
+|Cloudflare Workers
+|No — no filesystem access
+
+|Vercel/Next.js Edge Runtime
+|No — same reason; use the Node.js runtime instead (see xref:opensource:guide-render-nextjs.adoc[Next.js])
+
+|Deno Deploy
+|No, unless run through a Node compatibility layer with real `fs` access
+|===
+
+If your platform is missing from this table, the question to ask is simply: does this runtime give me `node:fs` against a real filesystem? If yes, `@maildeno/renderer` works there.
+
+== A Lambda handler
+
+Templates in Lambda are usually better fetched from S3 or a database than bundled as files — bundling ties every template change to a redeploy, and `/tmp` in Lambda is ephemeral. `render()` accepts an already-parsed template object for exactly this case.
+
+[source,typescript]
+----
+// handler.ts
+import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { render, RenderError } from "@maildeno/renderer";
+
+const s3 = new S3Client({ region: process.env.AWS_REGION });
+
+async function loadTemplate(templateId: string) {
+  const object = await s3.send(
+    new GetObjectCommand({
+      Bucket: process.env.TEMPLATE_BUCKET,
+      Key: `templates/${templateId}.json`,
+    }),
+  );
+  const body = await object.Body!.transformToString();
+  return JSON.parse(body);
+}
+
+export const handler: APIGatewayProxyHandlerV2 = async (event) => {
+  const { templateId, mergeTags, context } = JSON.parse(event.body ?? "{}");
+
+  try {
+    const template = await loadTemplate(templateId);
+    const html = await render(template, { mergeTags, context });
+
+    return { statusCode: 200, body: JSON.stringify({ html }) };
+  } catch (err) {
+    if (err instanceof RenderError) {
+      const status = err.code === "INVALID_TEMPLATE" ? 400 : 500;
+      return { statusCode: status, body: JSON.stringify({ error: err.code, message: err.message }) };
+    }
+
+    console.error(err);
+    return { statusCode: 500, body: JSON.stringify({ error: "RENDER_FAILED" }) };
+  }
+};
+----
+
+Because the template comes from S3 as a parsed object rather than a file path, `baseDir`/path-traversal concerns from the file-based flow don't apply here — `templateId` only ever becomes an S3 key, never a filesystem path. Sanitize it the same way you would any other S3 key built from user input (reject `/`, `..`, or validate against an allow-listed ID format) if it can come from an untrusted request.
+
+== Bundling `engine.wasm`
+
+`@maildeno/renderer` ships `engine.wasm` as part of its npm package. Whatever you use to build the Lambda deployment package (esbuild, webpack, SAM, CDK's `NodejsFunction`) needs to copy non-JS assets from `node_modules` into the bundle, not just tree-shake JS. If you see `RENDER_ERROR` with a message about the engine failing to load in Lambda but not locally, this is the first thing to check — confirm `engine.wasm` actually exists at the resolved path inside the deployed package.
+
+== Where to go next
+
+* xref:opensource:guide-render-backend.adoc[Server-side rendering] — `mergeTags`/`context` and the render-then-send pattern
+* xref:opensource:guide-storage-adapters.adoc[Storage adapters] — the S3 image-upload pattern this page's `loadTemplate` mirrors
+* xref:opensource:renderer.adoc[`@maildeno/renderer` reference] — full API and error codes

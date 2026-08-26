@@ -1,0 +1,121 @@
+= Next.js
+:description: Embed @maildeno/editor in a Next.js App Router project, avoiding server-render and hydration issues.
+
+[.lead]
+`@maildeno/editor` needs a browser — it mounts into the DOM and renders inside a shadow root. In a Next.js App Router project that means keeping it out of server rendering entirely, not just marking the component `"use client"`.
+
+== Installation
+
+[source,bash]
+----
+npm install @maildeno/editor
+----
+
+== Why `"use client"` alone isn't enough
+
+A `"use client"` component still gets rendered once on the server for the initial HTML payload. `@maildeno/editor` has no server-safe render path, so a plain client component will throw during that server pass. The fix is to load the component with `ssr: false`, which skips server rendering for it entirely.
+
+== The editor component
+
+[source,tsx]
+----
+// app/editor/EmailEditor.tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+import { init, type EditorHandle } from "@maildeno/editor/init";
+
+export default function EmailEditor({ templateId }: { templateId?: string }) {
+  const container = useRef<HTMLDivElement>(null);
+  const handle = useRef<EditorHandle | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    init({
+      container: container.current!,
+      templateId,
+      capabilities: { export: ["html", "json"] },
+      onSendTestEmail: async ({ to, subject, html }) => {
+        const res = await fetch("/api/send-test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to, subject, html }),
+        });
+        if (!res.ok) throw new Error("Failed to send test email");
+      },
+    }).then((h) => {
+      if (cancelled) return h.destroy();
+      handle.current = h;
+    });
+
+    return () => {
+      cancelled = true;
+      handle.current?.destroy();
+    };
+  }, [templateId]);
+
+  return <div ref={container} style={{ height: "100vh" }} />;
+}
+----
+
+== Loading it without SSR
+
+[source,tsx]
+----
+// app/editor/page.tsx
+"use client";
+
+import dynamic from "next/dynamic";
+
+const EmailEditor = dynamic(() => import("./EmailEditor"), { ssr: false });
+
+export default function EditorPage() {
+  return <EmailEditor />;
+}
+----
+
+`dynamic(..., { ssr: false })` is only valid from a Client Component in the App Router — hence `"use client"` at the top of `page.tsx` as well, even though its only job here is to render `<EmailEditor />`.
+
+== The send-test API route
+
+[source,typescript]
+----
+// app/api/send-test/route.ts
+import { NextResponse } from "next/server";
+
+export async function POST(request: Request) {
+  const { to, subject, html } = await request.json();
+
+  const res = await fetch("https://api.postmarkapp.com/email", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Postmark-Server-Token": process.env.POSTMARK_SERVER_TOKEN!,
+    },
+    body: JSON.stringify({
+      From: "Your App <preview@yourapp.com>",
+      To: to,
+      Subject: subject,
+      HtmlBody: html,
+      MessageStream: "outbound",
+    }),
+  });
+
+  if (!res.ok) {
+    return NextResponse.json({ error: await res.text() }, { status: 502 });
+  }
+
+  const data = await res.json();
+  return NextResponse.json({ success: true, messageId: data.MessageID });
+}
+----
+
+See xref:opensource:guide-test-email.adoc[Test email integration] for the full pattern, including swapping in Resend, SendGrid, or SES.
+
+== Where to go next
+
+* xref:opensource:guide-storage-adapters.adoc[Storage adapters] — persist templates and images through a Next.js route handler
+* xref:opensource:quickstart-react.adoc[React] — the underlying mount pattern, without Next's SSR constraints
+* xref:opensource:editor.adoc[`@maildeno/editor` reference] — full `EditorHandle` API

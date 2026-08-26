@@ -1,0 +1,95 @@
+= Vanilla JS (Vite)
+:description: Embed @maildeno/editor in a framework-free app using Vite, without a Vue application on the page.
+
+[.lead]
+`@maildeno/editor` ships a framework-agnostic `init()` entry point that mounts a `<maildeno-editor>` custom element inside a shadow root. This page walks through wiring it up in a plain Vite project — no Vue app, no build-time component compilation.
+
+NOTE: This is the same `init()` API used under the hood by every other framework guide in this section. If your stack isn't listed elsewhere, start here — the pattern is identical everywhere except for lifecycle hooks.
+
+== Scaffold a project
+
+[source,bash]
+----
+npm create vite@latest my-editor-app -- --template vanilla-ts
+cd my-editor-app
+npm install
+npm install @maildeno/editor
+----
+
+== Add a container
+
+The editor needs a container with a real, resolved height — a `0px` container silently renders nothing.
+
+[source,html]
+----
+<!-- index.html -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Email Editor</title>
+    <style>
+      html, body { margin: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="editor" style="height: 100vh"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+----
+
+== Mount the editor
+
+[source,typescript]
+----
+// src/main.ts
+import { init } from "@maildeno/editor/init";
+
+const handle = await init({
+  container: "#editor",
+  capabilities: { export: ["html", "mjml", "json"] },
+  onSendTestEmail: async ({ to, subject, html }) => {
+    await fetch("/api/send-test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to, subject, html }),
+    });
+  },
+});
+
+handle.on("save", ({ templateId }) => {
+  console.log("saved:", templateId);
+  console.log(handle.getHtml());
+});
+----
+
+`container` accepts either a CSS selector string or a resolved `HTMLElement`.
+
+== Run it
+
+[source,bash]
+----
+npx vite
+----
+
+Open the printed local URL — the editor mounts into `#editor` on load.
+
+== Clean up on teardown
+
+For a plain multi-page site, destroying on `beforeunload` is enough:
+
+[source,typescript]
+----
+window.addEventListener("beforeunload", () => handle.destroy());
+----
+
+If you're routing client-side (e.g. swapping the container without a full page reload), call `handle.destroy()` yourself before removing or replacing the container element — the editor doesn't detect that on its own.
+
+TIP: During Vite dev, HMR can re-execute `main.ts` without a full reload. If you see a duplicate editor mount while iterating on this file, guard the module with `import.meta.hot?.dispose(() => handle.destroy())`.
+
+== Where to go next
+
+* xref:opensource:guide-storage-adapters.adoc[Storage adapters] — persist templates and images to your own backend instead of `localStorage`
+* xref:opensource:guide-test-email.adoc[Test email integration] — implement the `/api/send-test` endpoint referenced above
+* xref:opensource:editor.adoc[`@maildeno/editor` reference] — full `EditorHandle` API

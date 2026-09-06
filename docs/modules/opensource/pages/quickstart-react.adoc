@@ -30,6 +30,11 @@ export default function Editor() {
     init({
       container: container.current!,
       capabilities: { export: ["html", "mjml", "json"] },
+      onSave: (payload: { templateId: string | null }) => {
+        console.log("Saved", payload);
+        const target = handle?.getHtml(); // handle?.getReactEmail() or handle?.getMjml()
+        console.log(target);
+      },
       onSendTestEmail: async ({ to, subject, html }) => {
         await fetch("/api/send-test", {
           method: "POST",
@@ -37,16 +42,7 @@ export default function Editor() {
           body: JSON.stringify({ to, subject, html }),
         });
       },
-    }).then((h) => {
-      // React 18 StrictMode mounts effects twice in development. Without
-      // this guard the first instance is orphaned and never destroyed.
-      if (cancelled) {
-        h.destroy();
-        return;
-      }
-      handle.current = h;
-      h.on("save", ({ templateId }) => console.log("saved:", templateId));
-    });
+    })
 
     return () => {
       cancelled = true;
@@ -55,7 +51,7 @@ export default function Editor() {
     };
   }, []);
 
-  return <div ref={container} style={{ height: "100vh" }} />;
+  return <div ref={container} />;
 }
 ----
 

@@ -1,10 +1,50 @@
 = @maildeno/editor
-:description: Install and embed Maildeno's open-source drag-and-drop email editor in your own application.
+:description: Install and embed Maildeno's open-source drag-and-drop email editor in your own application — React, Vue, Angular, Svelte, or plain HTML.
+:keywords: maildeno editor, embeddable email builder, drag and drop email editor, custom element, vue, react
 
 [.lead]
-`@maildeno/editor` is the same drag-and-drop editor used in the Maildeno dashboard, packaged as a standalone, MIT-licensed component you can embed in your own app.
+`@maildeno/editor` is the same drag-and-drop editor used in the Maildeno dashboard, packaged as a standalone, MIT-licensed component you embed in your own application. Storage, sending, authentication and image hosting all stay on your side — the editor is the visual layer and nothing else.
 
-NOTE: This page covers the self-hosted, embeddable editor. For the *hosted* dashboard version, see xref:builder:overview.adoc[Email Builder].
+[.pill]#MIT# [.pill-muted]#v{editor-version}# [.pill-muted]#No backend required#
+
+NOTE: This page covers the self-hosted, embeddable editor. For the *hosted* dashboard, see xref:builder:overview.adoc[Email Builder].
+
+== At a glance
+
+[.table-scroll, cols="1,3", options=header]
+|===
+|Property|Value
+
+|Package
+|`@maildeno/editor`
+
+|License
+|MIT
+
+|Peer dependency
+|`vue ^3.4.0` — **only** on the plain Vue-component path. `init()` and the custom element bundle their own runtime.
+
+|Runtime dependencies
+|None. Everything it needs is bundled.
+
+|Node requirement
+|Node {node-version}+ to build; the editor itself runs in the browser
+
+|Entry points
+|`@maildeno/editor` · `/init` · `/element`
+
+|Export formats
+|HTML, MJML, React Email, JSON
+
+|ESP conditional syntaxes
+|14 built in, plus custom registration
+
+|Backend
+|Not required. `localStorage` by default.
+
+|Viewport
+|Desktop only — a notice is shown below the breakpoint
+|===
 
 == Installation
 
@@ -13,142 +53,507 @@ NOTE: This page covers the self-hosted, embeddable editor. For the *hosted* dash
 npm install @maildeno/editor
 ----
 
-`vue` (`^3.4.0`) peer dependencies. It installs automatically alongside `@maildeno/editor` — no separate installation needed.
+There is no separate CSS import. Styling is injected programmatically when the editor mounts.
 
-The custom element (below) doesn't have even that requirement — it works on a page with no Vue app at all.
+TIP: On the `init()` and custom-element paths you do not need Vue on the host page at all — the runtime is bundled. The `vue` peer dependency applies only if you import the `EmailEditor` Vue component directly.
 
-== Two ways to mount it
+== Three ways to mount it
 
-=== As a Vue component
+The package has three entry points, deliberately separated so you only pay for what you use.
 
-For apps already built on Vue 3:
+[.table-scroll, cols="1,2,2", options=header]
+|===
+|Entry|Import|Use when
 
-[source,typescript]
-----
-import { EmailEditor } from "@maildeno/editor"
-----
+|Vue component
+|`@maildeno/editor`
+|Your app is already Vue 3. Smallest bundle — it uses your Vue runtime.
 
-[source,html]
-----
-<EmailEditor />
-----
+|Framework-free helper
+|`@maildeno/editor/init`
+|React, Angular, Svelte, plain HTML — anything that is not Vue. Recommended default.
 
-=== As a framework-agnostic custom element
+|Custom element
+|`@maildeno/editor/element`
+|You want `<maildeno-editor>` as a tag and will wire props yourself.
+|===
 
-No Vue, no build step required on the host page:
+[NOTE]
+====
+`init()` is deliberately *not* re-exported from the main entry. It pulls in the custom-element module, which builds the full shadow-root CSS bundle at module-load time. A host that only wants the plain Vue component should not pay that cost, so the two live at separate specifiers.
 
-[source,html]
-----
-<!doctype html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Maildeno Editor Vanilla</title>
-    <style>
-      body {
-        margin: 0;
-      }
-    </style>
-  </head>
+Tree-shaking does not save you from module-load side effects. If it runs at import time, it runs.
+====
 
-  <body>
-    <div id="editor" style="height: 100vh"></div>
+=== Framework-free — `init()`
 
-    <script type="module">
-      import { init } from "@maildeno/editor/init";
-
-      const handle = await init({
-        container: "#editor",
-        capabilities: { export: ["html", "mjml", "json"] },
-        onSendTestEmail: async ({ to, subject, html }) => {
-          await fetch("/api/send-test", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ to, subject, html }),
-          });
-        },
-      });
-
-      handle.on("save", ({ templateId }) => {
-        console.log(templateId);
-
-        const html = handle.getHtml();
-        const react = handle.getReactEmail();
-        const mjml = handle.getMjml();
-
-        console.log(html);
-        console.log(react);
-        console.log(mjml);
-      });
-
-      // Single-page apps: tear down before removing the container
-      window.addEventListener("beforeunload", () => handle.destroy());
-    </script>
-  </body>
-</html>
-
-----
-
-
-
-`init()` mounts a `<maildeno-editor>` custom element internally and returns an `EditorHandle` — `registerBlock()`, `registerESPWrapper()`, `registerMergeTags()`, `setTheme()`, `setUiTheme()`, `getHtml()`, `on(event, callback)`, and `destroy()`.
-
-== Storage adapters
-
-Templates, saved rows, and version history are all read and written through one interface:
+The recommended path for everything that is not Vue.
 
 [source,typescript]
 ----
-interface EditorStorageAdapter {
-  loadTemplate(templateId?: string): Promise<TemplateSnapshot | null>
-  saveTemplate(snapshot: TemplateSnapshot, templateId?: string): Promise<void>
-  listSavedRows(): Promise<SavedRow[]>
-  saveSavedRow(row: Record<string, any>, name: string): Promise<SavedRow>
-  deleteSavedRow(id: string): Promise<void>
-  renameSavedRow(id: string, name: string): Promise<void>
-  listVersions(templateId?: string): Promise<TemplateSnapshot[]>
-  saveVersion(snapshot: TemplateSnapshot, templateId?: string): Promise<void>
-  uploadImage(file: File): Promise<string>
+import { init, type EditorHandle } from "@maildeno/editor/init"
+
+const editor: EditorHandle = await init({
+  container: "#editor",                       // element or CSS selector
+  onSave: ({ templateId }) => console.log("saved", templateId),
+})
+----
+
+.React
+[source,tsx]
+----
+import { useEffect, useRef } from "react"
+import { init, type EditorHandle } from "@maildeno/editor/init"
+
+export default function Editor() {
+  const container = useRef<HTMLDivElement>(null)
+  const handle = useRef<EditorHandle | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    init({ container: container.current! }).then((h) => {
+      // React 18 StrictMode mounts effects twice in development.
+      // Without this guard the first instance is orphaned and never destroyed.
+      if (cancelled) return h.destroy()
+      handle.current = h
+    })
+
+    return () => {
+      cancelled = true
+      handle.current?.destroy()
+    }
+  }, [])
+
+  return <div ref={container} style={{ height: "100vh" }} />
 }
 ----
 
-By default, `@maildeno/editor` uses a built-in `localStorage` adapter — nothing to configure, nothing leaves the browser. Pass your own `storageAdapter` to persist templates to your own backend, or to Maildeno's hosted platform for cross-device sync, team collaboration, and an image CDN.
+.Plain HTML — no build step
+[source,html]
+----
+<div id="editor" style="height: 100vh"></div>
 
-== Export targets
+<script type="module">
+  import { init } from "@maildeno/editor/init"
 
-The editor exports the same four targets the rendering engine supports: `html`, `mjml`, `react-email`, and `json`, across 13 built-in ESP dialects for conditional-logic syntax (Mailchimp `*|IF|*`-style blocks, Liquid, and others) — the same export engine used by the hosted builder. `registerESPWrapper()` adds a dialect the built-in set doesn't cover.
+  const handle = await init({
+    container: "#editor",
+    capabilities: { export: ["html", "mjml", "json"] },
+    onSave: ({ templateId }) => console.log("saved", templateId),
+    onSendTestEmail: async ({ to, subject, html }) => {
+      await fetch("/api/send-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to, subject, html }),
+      })
+    },
+  })
 
-== Customization
+  // Single-page apps: tear down before removing the container
+  window.addEventListener("beforeunload", () => handle.destroy())
+</script>
+----
+
+Framework-specific walkthroughs live under xref:opensource:examples.adoc[Framework Guides].
+
+=== As a Vue component
+
+[source,vue]
+----
+<script setup lang="ts">
+import { EmailEditor } from "@maildeno/editor"
+import type { PartialStorageAdapter } from "@maildeno/editor"
+
+const storageAdapter: PartialStorageAdapter = { /* … */ }
+</script>
+
+<template>
+  <EmailEditor
+    :storage-adapter="storageAdapter"
+    :capabilities="{ export: ['html', 'mjml', 'react', 'json'] }"
+    color-mode="auto"
+    style="height: 100vh"
+    @save="({ templateId }) => console.log(templateId)"
+    @ready="() => console.log('canvas painted')"
+  />
+</template>
+----
+
+=== As a custom element
+
+[source,typescript]
+----
+import { registerMaildenoEditorElement } from "@maildeno/editor/element"
+
+registerMaildenoEditorElement()   // defines <maildeno-editor>
+----
+
+[source,html]
+----
+<maildeno-editor brand-name="Acme" color-mode="dark" versions></maildeno-editor>
+----
+
+Primitive props reflect as attributes. Object props — `storageAdapter`, `theme`, `assistant` — cannot round-trip through an attribute string, so set them as DOM properties:
+
+[source,typescript]
+----
+const el = document.querySelector("maildeno-editor")
+el.storageAdapter = myAdapter
+el.theme = { primary: "#3f5e4a" }
+----
+
+CAUTION: Vue's `defineCustomElement` treats props beginning with `on` as event listeners rather than props, so `el.onSave = fn` never reaches the component — the Save button appears and the callback never fires. Use `el.saveHandler = fn` on this path. `init()` handles this for you.
+
+== The editor handle
+
+`init()` returns an `EditorHandle`. Every method is also available on a Vue template ref and on the custom element instance.
+
+[.table-scroll, cols="2,2,3", options=header]
+|===
+|Method|Signature|Notes
+
+|`getHtml`
+|`(mode?: "prune" \| "wrap") => string \| null`
+|Production-ready HTML email
+
+|`getMjml`
+|`(mode?) => string \| null`
+|MJML source
+
+|`getReactEmail`
+|`(mode?) => string \| null`
+|React Email `.tsx` source
+
+|`getJson`
+|`() => Record<string, unknown> \| null`
+|The portable template document
+
+|`setJson`
+|`(data, opts?: { history?: "undoable" \| "reset" }) => void`
+|Accepts what `getJson()` returns, so `setJson(getJson())` round-trips
+
+|`getSelection`
+|`() => { id, type } \| null`
+|The selected node, or `null`
+
+|`setSelection`
+|`(id: string \| null) => boolean`
+|Returns `false` if no node has that id. Does not touch history.
+
+|`onChange`
+|`(cb: () => void) => () => void`
+|Fires after each committed change. Returns an unsubscribe function.
+
+|`setTheme`
+|`(theme: ThemeOptions) => void`
+|Re-themes live, no remount
+
+|`on` / `off`
+|`(event: "save", handler) => void`
+|Additional listeners for the save event
+
+|`element`
+|`HTMLElement`
+|The underlying element, for anything the handle does not wrap
+
+|`destroy`
+|`() => void`
+|Removes the element and unmounts the internal app
+|===
+
+[IMPORTANT]
+====
+`onChange` is keyed to **history commits**, not raw mutations. Typing inside a text block produces one call, not one per keystroke. If you are building an autosave or an AI assistant on top of it, that granularity is what makes the result sane.
+====
+
+`setJson`'s `history` option defaults to `"undoable"` — one Ctrl+Z-able step, correct for anything the user triggered. Pass `"reset"` when swapping which document is open, where undoing back into the previous document would be wrong.
+
+== Options
+
+[.table-scroll, cols="1,2,3", options=header]
+|===
+|Option|Type|Description
+
+|`container`
+|`HTMLElement \| string`
+|Required. An element, or a selector resolved with `document.querySelector`.
+
+|`templateId`
+|`string`
+|Load this template through the adapter on mount. Omit to start blank.
+
+|`storageAdapter`
+|`PartialStorageAdapter`
+|Every method optional; anything omitted falls back to `localStorage`.
+
+|`theme`
+|`ThemeOptions`
+|~70 colour tokens. See xref:opensource:editor-theming.adoc[Theming].
+
+|`capabilities`
+|`{ export?, savedRows? }`
+|**Restricts only, never grants.** See <<capabilities>>.
+
+|`onSave`
+|`(p: { templateId }) => void`
+|**Its presence is what reveals the Save button.**
+
+|`onSendTestEmail`
+|`(p: { to, subject, html }) => Promise<void> \| void`
+|Presence reveals the Send-test button.
+
+|`brandName`
+|`string`
+|Shown in the loading overlay and the desktop-only notice. Empty string removes the line entirely.
+
+|`versions`
+|`boolean`
+|Swaps the saved-templates panel for version history.
+
+|`assistant`
+|`AssistantMount`
+|Fills the assistant drawer. See <<assistant>>.
+
+|`shadowDom`
+|`boolean`
+|Default `true`. See <<shadow-dom>>.
+|===
+
+[TIP]
+====
+Several features are gated on **handler presence** rather than a config flag. Omit `onSave` and you get a genuinely read-only editor — no Save button, no save-status indicator, and no autosave timer. Omit `onSendTestEmail` and the Send-test button does not exist.
+
+This is deliberate: "did you provide a handler" cannot get out of sync with reality the way a `readOnly: true` flag can.
+====
+
+[#capabilities]
+== Capabilities
+
+`capabilities` layers explicit restrictions on top of the implicit ones. Omit any key to leave that area fully enabled.
+
+[source,typescript]
+----
+capabilities: {
+  export: ["html", "json"],                              // MJML and React removed
+  savedRows: { create: true, rename: false, delete: false },
+}
+----
 
 [cols="1,3", options=header]
 |===
-|API|Purpose
+|Key|Effect
 
-|`registerBlock(id, definition)`
-|Add a custom block type — a `schema` (drives the settings panel), a `render` function for the canvas, and optional per-target `renderEmail` functions.
+|`export`
+|Which formats appear in the Export dropdown. Omit for all four.
 
-|`theme` / `setTheme()`
-|Set brand colors (`primary`, `primaryHover`, and dark-mode variants). Applied via CSS custom properties.
-
-|`uiTheme` / `setUiTheme()`
-|`'light'`, `'dark'`, or `'auto'` (follows `prefers-color-scheme`).
-
-|`capabilities`
-|Host-controlled permission flags — `editBrandColors`, `editLayout`, `deleteBlocks` — for restricting what end users can change. No plan or billing concept is baked into the package.
-
-|Lifecycle hooks
-|`onBeforeSave`, `onAfterExport`, `onBlockAdd` / `onBlockRemove`, `onValidationError`, `onSendTestEmail`.
+|`savedRows`
+|Which saved-row controls this user gets — the canvas bookmark button, and the panel's rename and delete.
 |===
+
+For a host with roles, `savedRows` is what stops a viewer being shown three buttons that can only 403. The adapter's error toast is the backstop, not the design.
+
+WARNING: Compute capabilities server-side and pass them down with the page. Client-side permission checks are UX, not security.
+
+`versions` is a top-level option rather than a `capabilities` key because `capabilities` documents itself as only ever restricting, and `versions` grants.
+
+== Storage adapters
+
+Templates, saved rows, version history and images are all read and written through one interface. **Every method is optional** — anything you omit falls back to the built-in `localStorage` adapter.
+
+The minimum useful integration is four methods:
+
+[source,typescript]
+----
+import type { PartialStorageAdapter } from "@maildeno/editor"
+
+const storageAdapter: PartialStorageAdapter = {
+  async loadTemplate(templateId) {
+    const res = await fetch(`/api/templates/${templateId}`)
+    return res.ok ? res.json() : null
+  },
+
+  async saveTemplate(snapshot, templateId) {
+    const res = await fetch(`/api/templates/${templateId ?? ""}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(snapshot),
+    })
+    return res.json()                    // → { templateId }
+  },
+
+  async listTemplates() {
+    return (await fetch("/api/templates")).json()
+  },
+
+  async uploadImage(file) {
+    const form = new FormData()
+    form.append("file", file)
+    const res = await fetch("/api/uploads", { method: "POST", body: form })
+    const { url } = await res.json()
+    return url                            // must be permanently public
+  },
+}
+----
+
+[CAUTION]
+====
+The merge is **per-method, not per-area**. If you implement `saveTemplate` against your backend but omit `listTemplates`, the saved-templates panel will list `localStorage` rather than your data. The editor warns about that specific mismatch in development.
+====
+
+[IMPORTANT]
+====
+The URL returned by `uploadImage` must be **publicly reachable without authentication, permanently**. Email clients fetch images from arbitrary networks years after a send — a signed URL that expires is a broken email. This catches teams who reuse their app's private-bucket pattern: it works in preview, works in the test send, and breaks in six months.
+====
+
+**Multi-tenancy.** The editor never sees a tenant id, deliberately. Your adapter closes over the session and your API reads the tenant from the auth cookie. There is no tenant field in the template and no way for a client-side bug to write across tenants, because the client never names one.
+
+The full 17-method interface, version history, and the shared row library are covered in xref:opensource:guide-storage-adapters.adoc[Storage adapters].
+
+[#assistant]
+== The assistant drawer
+
+The editor ships the *place* an assistant goes, not an assistant. It provides the drawer, its trigger button, open/close state, escape handling, focus return and shadow-DOM-safe positioning. What goes inside is entirely yours.
+
+[source,typescript]
+----
+await init({
+  container: "#editor",
+  assistant: {
+    mount(el, editor) {
+      // el     — the drawer body element
+      // editor — { getJson, setJson, getSelection, setSelection, onChange }
+      el.innerHTML = `<button>Rewrite this block</button>`
+      el.querySelector("button")!.onclick = async () => {
+        const selection = editor.getSelection()
+        if (!selection) return
+        const next = await myApi.rewrite(editor.getJson(), selection.id)
+        editor.setJson(next)          // one undoable step
+      }
+    },
+    unmount(el) { /* optional cleanup */ },
+  },
+})
+----
+
+`mount` is called on **first open**, not at startup, and `unmount` on close — a drawer the user never opens costs nothing.
+
+Vue hosts can use the `#assistant` slot instead. Either one being present reveals the trigger button.
+
+[#shadow-dom]
+== Shadow DOM and the light-DOM escape hatch
+
+By default the editor renders inside a shadow root, which isolates its styles from the host page. That is usually what you want.
+
+Set `shadowDom: false` when predictable DOM behaviour matters more than isolation. Inside a shadow root, `event.target` is retargeted to the host, `document.activeElement` returns the host, `document.querySelector` cannot see in, and `@font-face` and `@property` are ignored. The package handles all of that internally — but your page's own scripts, or a third-party library, may not, and that is not fixable from inside the editor.
+
+[source,typescript]
+----
+await init({ container: "#editor", shadowDom: false })
+----
+
+The handle API is identical, so nothing downstream needs to know which mode is active. The trade-off cuts both ways: in light DOM, host CSS reaches the editor and vice versa.
+
+== Host page requirements
+
+Three things to get right, and two of them cause bugs that look like package faults.
+
+**The container needs a real height.**
+
+[source,css]
+----
+#editor { height: 100vh; }   /* or a sized flex parent */
+----
+
+A zero-height container mounts and renders nothing.
+
+**Avoid `transform` on ancestors.**
+
+[source,css]
+----
+/* Any of these on an ancestor breaks fixed-position floating UI */
+transform · filter · perspective · will-change
+----
+
+They create a containing block for `position: fixed`, which lands toolbars and pickers in the wrong place. A `transform: translateZ(0)` added years ago for a scroll performance fix will silently break every popover in any embedded component.
+
+**Wait for `ready`, not for mount.** "The component mounted" and "the user can look at it" are different moments. `ready` fires after the canvas has actually painted. If you remove your own loading placeholder on mount, users see blocks appearing one after another, which reads as breakage.
+
+NOTE: If your own placeholder outranks the editor's `z-9000` loading overlay, drop yours. It is the same overlay, already themed with your tokens, and it knows when the canvas is genuinely ready.
+
+The editor is desktop-only and shows a notice below the breakpoint rather than attempting mobile drag-and-drop.
+
+== Extension points
+
+Four registries. All are module-level — **call them at import time, not inside a component.**
+
+[.table-scroll, cols="1,3", options=header]
+|===
+|Registry|Purpose
+
+|`registerBlock(definition)`
+|Add a custom block type. See xref:opensource:editor-blocks.adoc[Custom blocks].
+
+|`registerESPSyntax(id, meta, overrides?)`
+|Add an ESP conditional syntax the 14 built-ins do not cover. See xref:opensource:editor-esp.adoc[ESP syntaxes].
+
+|`registerMergeTags(tags)`
+|Make your own fields discoverable in the merge-tag picker.
+
+|`storageAdapter`
+|Persist anywhere. See xref:opensource:guide-storage-adapters.adoc[Storage adapters].
+|===
+
+[source,typescript]
+----
+import { registerBlock, registerESPSyntax, registerMergeTags } from "@maildeno/editor"
+
+registerMergeTags([
+  { key: "customer.first_name" },
+  { key: "order.total" },
+])
+----
+
+== Export targets
+
+The same document exports to four formats:
+
+[source,typescript]
+----
+editor.getHtml()          // production-ready HTML email
+editor.getMjml()          // MJML source
+editor.getReactEmail()    // React Email .tsx
+editor.getJson()          // portable template document
+----
+
+**Store the JSON.** HTML is a build artifact — you will want to regenerate it with a newer engine one day.
+
+=== Prune or wrap
+
+When a template uses conditional visibility, HTML can be produced two ways:
+
+[source,typescript]
+----
+editor.getHtml("prune")   // evaluate now, emit only matching branches
+editor.getHtml("wrap")    // keep every branch, emit the ESP's own {% if %} syntax
+----
+
+Use **prune** when the personalisation data lives in your database — smaller email, and your ESP needs no conditional support. Use **wrap** when the data lives in the ESP.
+
+Most teams end up wrapping because it is what their ESP's editor produced, then discover their conditions cannot express what they need. It is worth an hour of thought up front.
 
 == From editor output to a rendered email
 
-Exporting a template (**Export → JSON**) produces the same template JSON format used across Maildeno, so the output plugs directly into either rendering path:
+Exporting **Export → JSON** produces the same template document used everywhere in Maildeno, so it plugs directly into either rendering path:
 
 * Offline, no API key: xref:opensource:renderer.adoc[`@maildeno/renderer`]
-* Through Maildeno's hosted Render API: any of the xref:sdk:overview.adoc[hosted SDKs]
+* Through the hosted Render API: any of the xref:sdk:overview.adoc[hosted SDKs]
 
 == Where to go next
 
-* xref:opensource:renderer.adoc[`@maildeno/renderer`] — render the exported JSON to HTML, MJML, or React Email
-* xref:opensource:overview.adoc[Open Source overview] — how self-hosting relates to the hosted platform
-* https://github.com/maildeno/editor[Source on GitHub]
+* xref:opensource:editor-api.adoc[Editor API reference] — every prop, event, slot and method
+* xref:opensource:editor-theming.adoc[Theming] — the full token list
+* xref:opensource:editor-blocks.adoc[Custom blocks] — a worked example
+* xref:opensource:editor-esp.adoc[ESP syntaxes] — the 14 built-ins and how to add one
+* xref:opensource:examples.adoc[Framework guides] — React, Vue, Next.js, Nuxt, Svelte, Angular, Astro, vanilla
+* {editor-repo}[Source on GitHub]

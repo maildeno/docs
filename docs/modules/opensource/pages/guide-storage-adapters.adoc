@@ -1,163 +1,440 @@
-= Storage Adapters
-:description: Connect @maildeno/editor to your own backend for templates and images, including a full S3 image-upload example.
+= Storage adapters
+:description: Connect the Maildeno editor to your own backend — templates, version history, saved rows, and image uploads through one optional interface.
+:keywords: EditorStorageAdapter, maildeno storage, multi-tenant email editor, image upload
 
 [.lead]
-By default `@maildeno/editor` persists templates to `localStorage` — enough for a demo, not for a real application. A storage adapter replaces that with calls to your own API. You implement only the methods you actually need; anything you omit falls back to the built-in default.
+Templates, version history, saved rows and images are all read and written through one interface. Every method is optional — anything you leave out falls back to the built-in `localStorage` adapter, so you can override only the parts you care about.
 
-== The adapter shape
+== The smallest useful integration
+
+Four methods is a real integration, and it is an afternoon of work.
 
 [source,typescript]
 ----
-interface StorageAdapter {
-  loadTemplate?(templateId: string): Promise<Template | null>;
-  saveTemplate?(snapshot: Template, templateId?: string): Promise<void>;
-  uploadImage?(file: File): Promise<string>; // returns a public URL
+import { init } from "@maildeno/editor/init"
+import type { PartialStorageAdapter } from "@maildeno/editor"
+
+const storageAdapter: PartialStorageAdapter = {
+  async loadTemplate(templateId) {
+    const res = await fetch(`/api/templates/${templateId}`)
+    return res.ok ? res.json() : null
+  },
+
+  async saveTemplate(snapshot, templateId) {
+    const res = await fetch(`/api/templates/${templateId ?? ""}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(snapshot),
+    })
+    if (!res.ok) throw new Error(`Save failed: ${res.status}`)
+    return res.json()                    // → { templateId }
+  },
+
+  async listTemplates() {
+    return (await fetch("/api/templates")).json()
+  },
+
+  async uploadImage(file) {
+    const form = new FormData()
+    form.append("file", file)
+    const res = await fetch("/api/uploads", { method: "POST", body: form })
+    const { url } = await res.json()
+    return url
+  },
+}
+
+await init({ container: "#editor", storageAdapter, onSave: () => {} })
+----
+
+`saveTemplate` returns `{ templateId }`. For a create, generate the id server-side and return it — the editor uses it for subsequent saves. No client-side id generation, no collision handling.
+
+[CAUTION]
+====
+**The merge is per-method, not per-area.** If you implement `saveTemplate` against your backend but omit `listTemplates`, the saved-templates panel will list `localStorage` rather than your data — which looks like data loss from the user's side.
+
+The editor warns about that specific mismatch in development.
+====
+
+== The full interface
+
+[source,typescript]
+----
+interface EditorStorageAdapter {
+  // ── Templates ──────────────────────────────────────────────────
+  loadTemplate(templateId?: string): Promise<TemplateSnapshot | null>
+  saveTemplate(snapshot: TemplateSnapshot, templateId?: string):
+    Promise<{ templateId: string }>
+  listTemplates(): Promise<TemplateSummary[]>
+  deleteTemplate(templateId: string): Promise<void>
+
+  // ── Version history ────────────────────────────────────────────
+  listTemplateVersions(templateId: string): Promise<TemplateVersionSummary[]>
+  getTemplateVersion(templateId: string, versionId: string):
+    Promise<TemplateSnapshot | null>
+  deleteTemplateVersion(templateId: string, versionId: string): Promise<void>
+  deleteAllTemplateVersions(templateId: string): Promise<void>
+  setTemplateVersionKept(templateId: string, versionId: string, kept: boolean):
+    Promise<void>
+
+  // ── Saved rows ─────────────────────────────────────────────────
+  listSavedRows(): Promise<SavedRow[]>
+  listSystemSavedRows(): Promise<SavedRow[]>
+  saveSavedRow(row: Record<string, any>, name: string): Promise<SavedRow | null>
+  deleteSavedRow(id: string): Promise<void>
+  renameSavedRow(id: string, name: string): Promise<void>
+  cloneSavedRowForCanvas(id: string): Record<string, any> | null
+
+  // ── Images ─────────────────────────────────────────────────────
+  uploadImage(file: File): Promise<string>
 }
 ----
 
-Pass it at mount time:
+== Templates
+
+=== `TemplateSnapshot`
+
+What gets persisted:
 
 [source,typescript]
 ----
-const handle = await init({
-  container: "#editor",
-  storageAdapter: {
-    async loadTemplate(templateId) {
-      const response = await fetch(`/api/templates/${templateId}`);
-      if (!response.ok) return null;
-      return response.json();
-    },
-
-    async saveTemplate(snapshot, templateId) {
-      await fetch(`/api/templates/${templateId ?? ""}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(snapshot),
-      });
-    },
-
-    uploadImage: myAdapter.uploadImage,
-  },
-});
-----
-
-The editor never needs to know what's behind these calls — your database, an S3 bucket, a CMS, whatever fits your stack.
-
-== Image uploads: a full S3 example
-
-`uploadImage(file)` receives whatever the user drops or picks in the editor, and must resolve to a public URL the rendered email can reference.
-
-[source,typescript]
-----
-// lib/s3.ts
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-
-const REGION = import.meta.env.VITE_AWS_REGION;
-const BUCKET = import.meta.env.VITE_S3_BUCKET_NAME;
-
-const s3 = new S3Client({
-  region: REGION,
-  credentials: {
-    accessKeyId: import.meta.env.VITE_AWS_ACCESS_KEY_ID,
-    secretAccessKey: import.meta.env.VITE_AWS_SECRET_ACCESS_KEY,
-  },
-  // Newer SDK versions default checksum calculation to "WHEN_SUPPORTED",
-  // which streams the body to compute a checksum — a path that breaks in
-  // some browser bundlers. PutObject doesn't require one, so pin this to
-  // only compute a checksum when the API actually demands it.
-  requestChecksumCalculation: "WHEN_REQUIRED",
-});
-
-export async function uploadFileToS3(file: File): Promise<string> {
-  const key = `editor-images/${crypto.randomUUID()}-${file.name}`;
-
-  // Read into bytes up front. Passing the raw File/Blob as `Body` triggers
-  // the SDK's automatic streaming checksum path, which throws
-  // "readableStream.getReader is not a function" in some browser bundlers.
-  // A plain Uint8Array sidesteps that entirely.
-  const fileBytes = new Uint8Array(await file.arrayBuffer());
-
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      Body: fileBytes,
-      ContentType: file.type,
-    }),
-  );
-
-  return `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
+interface TemplateSnapshot {
+  rows: Record<string, any>[]
+  canvasStyles: Record<string, any>
+  name?: string
+  tags?: string[]
+  updatedAt?: string
 }
 ----
 
+Store it as JSON. A `jsonb` column in Postgres works well and lets you query into it later.
+
+[source,sql]
+----
+create table templates (
+  id          uuid primary key default gen_random_uuid(),
+  tenant_id   uuid not null references tenants(id),
+  name        text,
+  tags        text[],
+  document    jsonb not null,
+  updated_at  timestamptz not null default now()
+);
+
+create index on templates (tenant_id, updated_at desc);
+----
+
+=== `listTemplates` returns summaries
+
 [source,typescript]
 ----
-// lib/adapter.ts
-import { uploadFileToS3 } from "./s3";
-
-export const myAdapter = {
-  async uploadImage(file: File) {
-    return uploadFileToS3(file);
-  },
-};
-----
-
-WARNING: The example above puts AWS credentials in the browser bundle. That's fine for local testing against a locked-down test bucket and a scoped-down IAM user — it is *not* something to ship to production. Anyone can read `VITE_AWS_ACCESS_KEY_ID`/`VITE_AWS_SECRET_ACCESS_KEY` straight out of your JS bundle.
-
-== Production: presigned URLs
-
-The safe version keeps credentials on your server. Your backend signs a short-lived, single-use upload URL; the browser uploads directly to S3 using that URL and never sees a credential.
-
-[source,typescript]
-----
-// server: presign endpoint
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-
-const s3 = new S3Client({ region: process.env.AWS_REGION });
-
-export async function POST(request: Request) {
-  const { filename, contentType } = await request.json();
-  const key = `editor-images/${crypto.randomUUID()}-${filename}`;
-
-  const url = await getSignedUrl(
-    s3,
-    new PutObjectCommand({
-      Bucket: process.env.S3_BUCKET_NAME,
-      Key: key,
-      ContentType: contentType,
-    }),
-    { expiresIn: 60 }, // seconds
-  );
-
-  const publicUrl = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
-  return Response.json({ uploadUrl: url, publicUrl });
+interface TemplateSummary {
+  templateId: string
+  name?: string
+  updatedAt?: string
 }
 ----
 
+Deliberately a summary rather than a full snapshot. Listing should not require loading every template's rows — for a cloud adapter that would mean fetching entire documents just to render a list. Selecting one calls `loadTemplate(id)` for the real content.
+
+[source,sql]
+----
+select id as "templateId", name, updated_at as "updatedAt"
+from templates
+where tenant_id = $1
+order by updated_at desc;
+----
+
+== Multi-tenancy
+
+The editor never sees a tenant id, and should not.
+
 [source,typescript]
 ----
-// client: storage adapter
-async function uploadImage(file: File): Promise<string> {
-  const presign = await fetch("/api/uploads/presign", {
+// The adapter closes over the session. The editor never names a tenant.
+const storageAdapter: PartialStorageAdapter = {
+  async listTemplates() {
+    // Your API reads the tenant from the auth cookie
+    return (await fetch("/api/templates", { credentials: "include" })).json()
+  },
+}
+----
+
+That is the whole isolation story. There is no tenant field in the template, no tenant parameter in the adapter, and no way for a client-side bug to write across tenants — because the client never names one.
+
+WARNING: Embedded components that ask you for a tenant id are asking you to trust the browser. Close over the session instead and resolve the tenant server-side.
+
+== Version history
+
+Set `versions: true` and the saved-templates panel is replaced by a version browser.
+
+[source,typescript]
+----
+await init({ container: "#editor", storageAdapter, versions: true })
+----
+
+All five version methods are optional and each control appears only when its method exists. An adapter can support listing and restoring without supporting deletion, and the UI reflects exactly that.
+
+[source,typescript]
+----
+interface TemplateVersionSummary {
+  versionId: string
+  createdAt: string
+  label?: string      // "Before redesign" — falls back to a relative timestamp
+  kept?: boolean      // pinned; survives deleteAllTemplateVersions
+  author?: string     // free-form, rendered verbatim
+}
+----
+
+`author` is a plain string rather than a user object on purpose — the editor has no user model and should not grow one just to render a name.
+
+=== Nothing here creates a version
+
+Note the asymmetry with `saveTemplate`: no method in this interface creates a version.
+
+When a save produces a version is a **policy** question — every save, on a timer, on explicit request — and you already own `saveTemplate`, so decide there:
+
+[source,typescript]
+----
+async saveTemplate(snapshot, templateId) {
+  const res = await fetch(`/api/templates/${templateId ?? ""}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ filename: file.name, contentType: file.type }),
-  }).then((r) => r.json());
-
-  await fetch(presign.uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": file.type },
-    body: file,
-  });
-
-  return presign.publicUrl;
+    headers: { "content-type": "application/json" },
+    // Your API decides whether this write also snapshots a version
+    body: JSON.stringify({ ...snapshot, snapshot: true }),
+  })
+  return res.json()
 }
 ----
 
-Swap the S3 calls for whatever object storage you use (Cloudflare R2, GCS, Supabase Storage) — the shape is the same: sign server-side, upload directly from the browser, hand the editor back a plain URL.
+Putting version creation in the interface would force one policy on every host.
+
+TIP: Store full snapshots rather than diffs for anything under a megabyte. Storage is cheap; reconstructing a document from a diff chain at 2am is not.
+
+[source,sql]
+----
+create table template_versions (
+  id          uuid primary key default gen_random_uuid(),
+  template_id uuid not null references templates(id) on delete cascade,
+  document    jsonb not null,
+  label       text,
+  author      text,
+  kept        boolean not null default false,
+  created_at  timestamptz not null default now()
+);
+
+create index on template_versions (template_id, created_at desc);
+----
+
+=== Kept versions survive bulk deletion
+
+`deleteAllTemplateVersions` must spare versions where `kept` is `true`. The panel's confirmation copy says so, and an implementation that deletes them would contradict what the user was told.
+
+[source,sql]
+----
+delete from template_versions
+where template_id = $1 and kept = false;
+----
+
+IMPORTANT: A contract includes the copy the UI shows the user. If your implementation breaks that promise, the contract is broken even when the types still check.
+
+== Saved rows
+
+Two libraries, deliberately asymmetric.
+
+[cols="1,3", options=header]
+|===
+|Method|Library
+
+|`listSavedRows`
+|The user's own rows — writable
+
+|`listSystemSavedRows`
+|A shared, curated library — **read-only by construction**
+|===
+
+There is no `saveSystemSavedRow`, `deleteSystemSavedRow` or `renameSystemSavedRow`, so the panel renders the shared tab without rename or delete controls. Who may curate a shared library is a permissions question your admin UI answers; the editor has no user model to answer it with, and inventing one just to grey out a button would be the wrong boundary.
+
+The tab only appears when `listSystemSavedRows` is implemented, so a host with one library sees exactly the panel it has today.
+
+NOTE: The built-in `localStorage` adapter deliberately does **not** implement `listSystemSavedRows`. "Shared across an organisation" has no meaning in one browser's storage, and faking it would demonstrate a feature that cannot work.
+
+=== `cloneSavedRowForCanvas` is synchronous
+
+[source,typescript]
+----
+cloneSavedRowForCanvas(id: string): Record<string, any> | null
+----
+
+It is called when a row is dropped onto the canvas, and a drag-drop handler cannot await. Keep both libraries in memory after listing them, and resolve from that cache:
+
+[source,typescript]
+----
+let ownRows: SavedRow[] = []
+let sharedRows: SavedRow[] = []
+
+const storageAdapter: PartialStorageAdapter = {
+  async listSavedRows() {
+    ownRows = await (await fetch("/api/rows")).json()
+    return ownRows
+  },
+  async listSystemSavedRows() {
+    sharedRows = await (await fetch("/api/rows/shared")).json()
+    return sharedRows
+  },
+  cloneSavedRowForCanvas(id) {
+    // Must resolve from BOTH libraries — the drag doesn't know which tab
+    // the row came from.
+    const found = ownRows.find(r => r.id === id) ?? sharedRows.find(r => r.id === id)
+    return found ? structuredClone(found.row) : null
+  },
+}
+----
+
+CAUTION: Return a **clone**, not the stored object. Returning the original means the canvas and your cache share a reference, and editing the dropped row silently mutates the saved one.
+
+== Image uploads
+
+[source,typescript]
+----
+uploadImage(file: File): Promise<string>
+----
+
+Return a URL. That is the whole contract. Presigned S3, Cloudflare R2, your own endpoint, a CDN — the editor does not care.
+
+[source,typescript]
+----
+async uploadImage(file) {
+  // Ask your API for a presigned PUT, upload direct to the bucket.
+  // The file never touches your server.
+  const { uploadUrl, publicUrl } = await fetch("/api/uploads/sign", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: file.name, type: file.type, size: file.size }),
+  }).then(r => r.json())
+
+  const put = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: { "content-type": file.type },
+    body: file,
+  })
+  if (!put.ok) throw new Error("Upload failed")
+
+  return publicUrl
+}
+----
+
+[IMPORTANT]
+====
+**The URL must be publicly reachable without authentication, permanently.**
+
+Email clients fetch images from arbitrary networks, often years after a send. A signed URL that expires is a broken email.
+
+This catches teams who reuse their app's private-bucket pattern for email images: it works in preview, works in the test send, and breaks in six months when the signature expires. Email is one of very few places where "this URL must work forever, unauthenticated" is a hard requirement.
+====
+
+Validate on your side, not the editor's: file type allow-list, a size ceiling, and image dimensions if you care about layout.
+
+== Reporting your own errors
+
+When your adapter has already told the user what went wrong — a 403, a plan limit, an expired session — mark the error and the editor skips its own generic toast rather than stacking a vaguer message on top of yours.
+
+[source,typescript]
+----
+import { markHandled } from "@maildeno/editor"
+
+async saveTemplate(snapshot, templateId) {
+  const res = await fetch(`/api/templates/${templateId ?? ""}`, { /* … */ })
+
+  if (res.status === 403) {
+    showMyToast("You don't have permission to edit this template.")
+    throw markHandled(new Error("forbidden"))
+  }
+  if (res.status === 402) {
+    showUpgradeDialog()
+    throw markHandled(new Error("plan limit"))
+  }
+  if (!res.ok) throw new Error(`Save failed: ${res.status}`)
+
+  return res.json()
+}
+----
+
+Unmarked errors still surface the editor's generic message, which is the right default for a failure you did not anticipate.
+
+== The autosave draft is not part of this
+
+The editor keeps a local draft so a refresh mid-edit does not lose work. It is deliberately **outside** this interface:
+
+* single slot, not a list
+* 30-day TTL
+* always `localStorage`, whichever adapter is active
+* cleared once a real save happens through `saveTemplate`
+
+It is a crash-recovery buffer, not persistence. Two jobs that look similar — "don't lose work if the tab crashes" and "save this document" — and conflating them gives you a draft system that fights your database.
+
+== Combining with capabilities
+
+Adapter errors are the backstop; capabilities are the design. For a read-only viewer, do not render controls that can only fail:
+
+[source,typescript]
+----
+await init({
+  container: "#editor",
+  storageAdapter,
+  // No onSave → no Save button, no save indicator, no autosave timer
+  capabilities: {
+    export: ["html"],
+    savedRows: { create: false, rename: false, delete: false },
+  },
+})
+----
+
+WARNING: Compute capabilities server-side and send them down with the page. Deriving them in the browser from a role string is a suggestion, not a control.
+
+== Testing your adapter
+
+[source,typescript]
+----
+import { expect, test } from "vitest"
+
+test("saveTemplate → loadTemplate round-trips", async () => {
+  const snapshot = { rows: [/* … */], canvasStyles: {}, name: "Test" }
+
+  const { templateId } = await adapter.saveTemplate(snapshot)
+  const loaded = await adapter.loadTemplate(templateId)
+
+  expect(loaded?.rows).toEqual(snapshot.rows)
+  expect(loaded?.canvasStyles).toEqual(snapshot.canvasStyles)
+})
+
+test("listTemplates includes the saved template", async () => {
+  const { templateId } = await adapter.saveTemplate(snapshot)
+  const list = await adapter.listTemplates()
+  expect(list.map(t => t.templateId)).toContain(templateId)
+})
+
+test("cloneSavedRowForCanvas returns a clone, not a reference", async () => {
+  await adapter.listSavedRows()
+  const a = adapter.cloneSavedRowForCanvas("row-1")!
+  const b = adapter.cloneSavedRowForCanvas("row-1")!
+  a.columns = []
+  expect(b.columns).not.toEqual([])
+})
+----
+
+== Checklist
+
+* [ ] `saveTemplate` returns `{ templateId }`, generated server-side on create
+* [ ] `listTemplates` is implemented if `saveTemplate` is
+* [ ] Tenant resolved from the session, never from a client argument
+* [ ] `uploadImage` returns a permanently public, unauthenticated URL
+* [ ] `cloneSavedRowForCanvas` is synchronous and resolves from both libraries
+* [ ] `cloneSavedRowForCanvas` returns a clone, not the stored object
+* [ ] `deleteAllTemplateVersions` spares `kept` versions
+* [ ] Errors you have already reported are wrapped in `markHandled`
+* [ ] Capabilities are computed server-side
 
 == Where to go next
 
-* xref:opensource:editor.adoc[`@maildeno/editor` reference] — full storage adapter surface, including saved rows and version history
-* xref:opensource:guide-test-email.adoc[Test email integration] — the other half of a production setup
+* xref:opensource:editor-api.adoc[Editor API reference] — the full type list
+* xref:opensource:editor.adoc[`@maildeno/editor`] — mounting and options
+* xref:opensource:guide-test-email.adoc[Test email integration] — the other host-owned operation

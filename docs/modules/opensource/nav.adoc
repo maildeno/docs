@@ -1,21 +1,33 @@
 // modules/opensource/nav.adoc
-* Open Source
+* Open source
 ** xref:opensource:overview.adoc[Overview]
-** xref:opensource:editor.adoc[@maildeno/editor]
-** xref:opensource:renderer.adoc[@maildeno/renderer]
-** xref:opensource:examples.adoc[Framework Guides]
-*** xref:opensource:quickstart-vue.adoc[Vue 3]
+** Editor
+*** xref:opensource:editor.adoc[@maildeno/editor]
+*** xref:opensource:editor-api.adoc[API reference]
+*** xref:opensource:editor-theming.adoc[Theming]
+*** xref:opensource:editor-blocks.adoc[Custom blocks]
+*** xref:opensource:editor-esp.adoc[ESP syntaxes {amp} merge tags]
+** Renderer
+*** xref:opensource:renderer.adoc[@maildeno/renderer]
+*** xref:opensource:renderer-edge.adoc[Browsers {amp} edge runtimes]
+** xref:opensource:template-schema.adoc[Template schema]
+** Framework guides
+*** xref:opensource:examples.adoc[Overview]
 *** xref:opensource:quickstart-react.adoc[React]
 *** xref:opensource:quickstart-nextjs.adoc[Next.js]
+*** xref:opensource:quickstart-vue.adoc[Vue 3]
 *** xref:opensource:quickstart-nuxt.adoc[Nuxt]
-*** xref:opensource:quickstart-svelte.adoc[Svelte & SvelteKit]
+*** xref:opensource:quickstart-svelte.adoc[Svelte {amp} SvelteKit]
 *** xref:opensource:quickstart-angular.adoc[Angular]
 *** xref:opensource:quickstart-astro.adoc[Astro]
 *** xref:opensource:quickstart-vanilla.adoc[Vanilla JS (Vite)]
+** Integration guides
 *** xref:opensource:guide-storage-adapters.adoc[Storage adapters]
 *** xref:opensource:guide-test-email.adoc[Test email integration]
-*** xref:opensource:guide-render-backend.adoc[Server-side rendering]
-*** xref:opensource:guide-render-nestjs.adoc[Renderer: NestJS]
-*** xref:opensource:guide-render-fastify.adoc[Renderer: Fastify]
-*** xref:opensource:guide-render-nextjs.adoc[Renderer: Next.js]
-*** xref:opensource:guide-render-serverless.adoc[Renderer: Serverless]
+** Server-side rendering
+*** xref:opensource:guide-render-backend.adoc[Overview]
+*** xref:opensource:guide-render-workers.adoc[Cloudflare Workers]
+*** xref:opensource:guide-render-nextjs.adoc[Next.js]
+*** xref:opensource:guide-render-nestjs.adoc[NestJS]
+*** xref:opensource:guide-render-fastify.adoc[Fastify]
+*** xref:opensource:guide-render-serverless.adoc[Serverless]

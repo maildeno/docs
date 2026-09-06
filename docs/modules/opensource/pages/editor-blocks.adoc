@@ -1,0 +1,417 @@
+= Custom blocks
+:description: Register your own block types in the Maildeno editor — a product card, review widget, or anything specific to your product.
+:keywords: registerBlock, maildeno custom block, BlockDefinition, email block
+
+[.lead]
+`registerBlock()` adds a block type that appears in the editor's sidebar alongside the built-ins. Users drag it onto the canvas, fill in its fields, and it exports to HTML, MJML and React Email like anything else.
+
+== When you need one
+
+The built-in blocks cover generic email content — text, images, buttons, lists, dividers, menus, social icons. A custom block is for content specific to *your* product and data model:
+
+* A product card for e-commerce campaigns
+* A review or testimonial widget
+* A booking summary, ticket stub, or itinerary row
+* An order line-item table
+* A chart or metric tile
+
+The payoff is that your marketing team stops filing a developer ticket every time they want one.
+
+== The definition
+
+[source,typescript]
+----
+import { registerBlock } from "@maildeno/editor"
+
+registerBlock({
+  name: "product-card",
+  label: "Product Card",
+  icon: "<svg viewBox='0 0 24 24'>…</svg>",
+  schema: { /* block properties */ },
+  renderCanvas: ProductCardCanvas,      // Vue component
+  renderSettings: ProductCardPanel,     // Vue component
+  renderEmail: {
+    html:       (props, ctx) => `<table>…</table>`,
+    mjml:       (props, ctx) => `<mj-section>…</mj-section>`,
+    reactEmail: (props, ctx) => `<Section>…</Section>`,
+  },
+})
+----
+
+[.table-scroll, cols="1,1,3", options=header]
+|===
+|Field|Required|Purpose
+
+|`name`
+|Yes
+|The block's type identifier. Serialised into the template document.
+
+|`label`
+|No
+|Sidebar tooltip and info dialog. Falls back to `name`.
+
+|`icon`
+|No
+|Raw SVG string or a Vue component. **Without one the block has no sidebar entry** and can only be added programmatically.
+
+|`schema`
+|Yes
+|The block's property definitions.
+
+|`renderCanvas`
+|Yes
+|Vue component. Receives one `component` prop — the block's node from the tree.
+
+|`renderSettings`
+|Yes
+|Vue component, no props. Reads the selected component itself.
+
+|`renderEmail.html`
+|Yes
+|HTML output.
+
+|`renderEmail.mjml`
+|Yes
+|MJML output.
+
+|`renderEmail.reactEmail`
+|Yes
+|React Email JSX output.
+|===
+
+A two-argument form `registerBlock(id, definition)` is also accepted — the built-ins use it. When both are given, the explicit id wins, and `name` is kept in sync with the registry key.
+
+=== Why all five renderers are required
+
+Unusual for a plugin API, and the reason is specific.
+
+The three export generators are each a `switch(type)` dispatcher with **no default case**. An unmapped type renders as an empty string — silently. No warning, no error; the block simply is not in the output. Block dispatch also happens in the canvas and in the settings panel, each a separate chain with the same property.
+
+Five dispatch points, five silent failure modes, five required renderers.
+
+TIP: The general rule this comes from: if a missing implementation fails silently, make it required. Optional-with-fallback is only kind when the fallback is *visible*.
+
+== The icon
+
+A raw SVG string is the common case — paste it from whatever icon set you use, with no import and no build step:
+
+[source,typescript]
+----
+icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+  <rect x="3" y="4" width="18" height="16" rx="2"/>
+  <path d="M3 10h18M8 15h5"/>
+</svg>`
+----
+
+It is rendered inline, so it inherits `currentColor` and the surrounding sizing. That is what keeps a custom block visually consistent with the built-ins rather than looking bolted on.
+
+== `BlockRenderContext`
+
+Your `renderEmail` functions receive a context object with the same helpers the built-in blocks use. You do not reimplement email HTML escaping.
+
+[source,typescript]
+----
+interface BlockRenderContext {
+  uid: string
+  marginStyle: string
+  paddingStyle: string
+
+  escapeHtml(s: string): string
+  escapeAttr(s: string): string
+  safeUrl(s: string): string
+
+  resolveBgCss(gradient: any, fallback: string): string
+  resolveBgVml(gradient: any, fallback: string): { vmlOpen: string; vmlClose: string }
+
+  getResponsiveClasses(
+    desktopHide: boolean,
+    mobileHide: boolean,
+    suffix?: string,
+  ): string
+
+  react: {
+    parseCssString(css: string): Record<string, string>
+    parseMarginPaddingDiscrete(margin?: any, padding?: any): Record<string, string>
+    normalizeFontFamily(value: string): string
+    styleObj(obj: Record<string, any>): string
+    normalizeInlineStylesToReact(html: string): string
+    buildInlineJsx(
+      component: "Text" | "Heading",
+      className: string,
+      styleRecord: Record<string, any>,
+      children: string,
+      as?: string,
+    ): string
+  }
+}
+----
+
+[cols="1,3", options=header]
+|===
+|Helper|Use for
+
+|`escapeHtml`
+|Any user-supplied string going into element content
+
+|`escapeAttr`
+|Any user-supplied string going into an attribute value
+
+|`safeUrl`
+|`href` and `src` values — rejects `javascript:` and friends
+
+|`marginStyle` / `paddingStyle`
+|Pre-computed spacing for this block's configured margin and padding
+
+|`resolveBgCss`
+|A background declaration, gradient-aware, with a solid fallback
+
+|`resolveBgVml`
+|The `+<!--[if mso]><v:rect>+` wrapper Outlook needs for gradients and background images
+
+|`getResponsiveClasses`
+|Class names that drive the generated mobile `@media` block
+
+|`react.*`
+|The React Email target, which needs JSX style *objects* rather than CSS strings
+|===
+
+WARNING: Always run user-supplied strings through `escapeHtml` or `escapeAttr`. A block that interpolates raw props into markup is an HTML injection point in every email it renders.
+
+== A worked example
+
+A product card: image, title, price, and a call to action.
+
+=== 1. The schema
+
+[source,typescript]
+----
+const schema = {
+  imageUrl:    { type: "string", label: "Image URL",  default: "" },
+  imageAlt:    { type: "string", label: "Image alt",  default: "" },
+  title:       { type: "string", label: "Title",      default: "Product name" },
+  price:       { type: "string", label: "Price",      default: "$0.00" },
+  ctaLabel:    { type: "string", label: "Button text", default: "Buy now" },
+  ctaUrl:      { type: "string", label: "Button URL",  default: "" },
+  accentColor: { type: "color",  label: "Accent",      default: "#3f5e4a" },
+}
+----
+
+=== 2. The HTML renderer
+
+Table-based, because that is what survives Outlook's rendering engine.
+
+[source,typescript]
+----
+function html(props: any, ctx: BlockRenderContext): string {
+  const {
+    imageUrl, imageAlt, title, price, ctaLabel, ctaUrl, accentColor,
+  } = props
+
+  return `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="${ctx.marginStyle}">
+  <tr>
+    <td style="${ctx.paddingStyle}" align="center">
+      ${imageUrl ? `
+      <img src="${ctx.safeUrl(imageUrl)}"
+           alt="${ctx.escapeAttr(imageAlt || title)}"
+           width="240"
+           style="display:block; width:100%; max-width:240px; height:auto; border:0;">
+      ` : ""}
+
+      <div style="font-size:16px; font-weight:600; margin-top:12px; color:#111827;">
+        ${ctx.escapeHtml(title)}
+      </div>
+
+      <div style="font-size:14px; color:#6b7280; margin-top:4px;">
+        ${ctx.escapeHtml(price)}
+      </div>
+
+      ${ctaUrl ? `
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"
+             style="margin-top:14px;">
+        <tr>
+          <td bgcolor="${ctx.escapeAttr(accentColor)}"
+              style="border-radius:6px; mso-padding-alt:12px 22px;">
+            <a href="${ctx.safeUrl(ctaUrl)}"
+               style="display:inline-block; padding:12px 22px; font-size:14px;
+                      font-weight:600; color:#ffffff; text-decoration:none;
+                      border-radius:6px;">
+              ${ctx.escapeHtml(ctaLabel)}
+            </a>
+          </td>
+        </tr>
+      </table>
+      ` : ""}
+    </td>
+  </tr>
+</table>`.trim()
+}
+----
+
+Two details worth copying: `role="presentation"` stops screen readers announcing the layout table, and `mso-padding-alt` gives Word the padding it will actually respect.
+
+=== 3. The MJML renderer
+
+[source,typescript]
+----
+function mjml(props: any, ctx: BlockRenderContext): string {
+  const { imageUrl, imageAlt, title, price, ctaLabel, ctaUrl, accentColor } = props
+
+  return `
+<mj-section padding="0">
+  <mj-column>
+    ${imageUrl ? `<mj-image src="${ctx.safeUrl(imageUrl)}"
+                            alt="${ctx.escapeAttr(imageAlt || title)}"
+                            width="240px" />` : ""}
+    <mj-text font-size="16px" font-weight="600" align="center">
+      ${ctx.escapeHtml(title)}
+    </mj-text>
+    <mj-text font-size="14px" color="#6b7280" align="center">
+      ${ctx.escapeHtml(price)}
+    </mj-text>
+    ${ctaUrl ? `<mj-button background-color="${ctx.escapeAttr(accentColor)}"
+                            href="${ctx.safeUrl(ctaUrl)}"
+                            border-radius="6px">
+                  ${ctx.escapeHtml(ctaLabel)}
+                </mj-button>` : ""}
+  </mj-column>
+</mj-section>`.trim()
+}
+----
+
+=== 4. The React Email renderer
+
+Returns JSX **source**, not a component. Note `react.styleObj` — JSX needs style objects, not CSS strings.
+
+[source,typescript]
+----
+function reactEmail(props: any, ctx: BlockRenderContext): string {
+  const { imageUrl, imageAlt, title, price, ctaLabel, ctaUrl, accentColor } = props
+
+  const titleStyle = ctx.react.styleObj({
+    fontSize: "16px", fontWeight: 600, marginTop: "12px", color: "#111827",
+  })
+  const buttonStyle = ctx.react.styleObj({
+    backgroundColor: accentColor, color: "#ffffff", padding: "12px 22px",
+    borderRadius: "6px", fontSize: "14px", fontWeight: 600,
+    textDecoration: "none", display: "inline-block",
+  })
+
+  return `
+<Section style={{ textAlign: "center" }}>
+  ${imageUrl ? `<Img src="${ctx.safeUrl(imageUrl)}"
+       alt="${ctx.escapeAttr(imageAlt || title)}" width="240" />` : ""}
+  <Text style={${titleStyle}}>${ctx.escapeHtml(title)}</Text>
+  <Text style={{ fontSize: "14px", color: "#6b7280" }}>${ctx.escapeHtml(price)}</Text>
+  ${ctaUrl ? `<Button href="${ctx.safeUrl(ctaUrl)}" style={${buttonStyle}}>
+    ${ctx.escapeHtml(ctaLabel)}
+  </Button>` : ""}
+</Section>`.trim()
+}
+----
+
+=== 5. The canvas component
+
+A Vue component receiving the block's node as a single `component` prop.
+
+[source,vue]
+----
+<script setup lang="ts">
+const props = defineProps<{ component: { id: string; props: any } }>()
+</script>
+
+<template>
+  <div style="text-align: center; padding: 12px;">
+    <img
+      v-if="component.props.imageUrl"
+      :src="component.props.imageUrl"
+      :alt="component.props.imageAlt || component.props.title"
+      style="max-width: 240px; width: 100%; height: auto;"
+    />
+    <div style="font-weight: 600; margin-top: 12px;">
+      {{ component.props.title }}
+    </div>
+    <div style="color: #6b7280; font-size: 14px;">
+      {{ component.props.price }}
+    </div>
+    <a
+      v-if="component.props.ctaUrl"
+      :style="{
+        background: component.props.accentColor,
+        color: '#fff',
+        padding: '10px 20px',
+        borderRadius: '6px',
+        display: 'inline-block',
+        marginTop: '14px',
+        textDecoration: 'none',
+      }"
+    >{{ component.props.ctaLabel }}</a>
+  </div>
+</template>
+----
+
+The canvas render is a *preview*, not the email. It should look right in the editor; the email renderers own the output.
+
+=== 6. Register it
+
+[source,typescript]
+----
+import { registerBlock } from "@maildeno/editor"
+import ProductCardCanvas from "./ProductCardCanvas.vue"
+import ProductCardPanel from "./ProductCardPanel.vue"
+
+registerBlock({
+  name: "product-card",
+  label: "Product Card",
+  icon: productIconSvg,
+  schema,
+  renderCanvas: ProductCardCanvas,
+  renderSettings: ProductCardPanel,
+  renderEmail: { html, mjml, reactEmail },
+})
+----
+
+IMPORTANT: The registry is module-level. Call `registerBlock` at import time, **before** mounting the editor. A block registered after mount will not appear in the sidebar.
+
+== How it serialises
+
+Your block lands in the template document like any built-in:
+
+[source,json]
+----
+{
+  "id": "c-7",
+  "type": "product-card",
+  "props": {
+    "imageUrl": "https://cdn.example.com/p/1.jpg",
+    "title": "Merino Crew",
+    "price": "$89.00",
+    "ctaUrl": "{{ url.product_1 }}",
+    "ctaLabel": "Buy now",
+    "accentColor": "#3f5e4a"
+  }
+}
+----
+
+Which means merge tags work inside your block's props with no extra work — `{{ url.product_1 }}` above resolves at render time exactly as it would in a built-in button.
+
+CAUTION: A template containing your block can only be rendered by a build that has the block registered. `@maildeno/renderer` renders built-in types through its compiled engine; custom types come from the editor's own export path. If you need custom blocks rendered server-side, export the HTML from the editor and store that alongside the JSON.
+
+== Checklist before shipping a block
+
+* [ ] Every user-supplied string passes through `escapeHtml` or `escapeAttr`
+* [ ] Every URL passes through `safeUrl`
+* [ ] Layout uses `<table>`, not `<div>` with CSS layout
+* [ ] Layout tables carry `role="presentation"`
+* [ ] Buttons are styled `<a>` elements — `<button>` does not work in email
+* [ ] Images have meaningful `alt` text, with a pipe default if it comes from a merge tag
+* [ ] Padding is on `<td>`, not margin on a `<div>`
+* [ ] The block renders in Outlook desktop, not just in a preview tool
+* [ ] All three email renderers produce output — check each, since a gap is silent
+
+== Where to go next
+
+* xref:opensource:editor-api.adoc[Editor API reference] — `BlockDefinition` in full
+* xref:opensource:template-schema.adoc[Template schema] — how blocks serialise
+* xref:opensource:editor-esp.adoc[ESP syntaxes] — the other main extension point

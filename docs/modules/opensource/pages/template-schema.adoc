@@ -1,0 +1,368 @@
+= Template schema
+:description: The template JSON contract shared by the Maildeno editor, the offline renderer, and the hosted Render API — field by field.
+:keywords: maildeno template json, email template schema, schema_version
+
+[.lead]
+One JSON document is the interface between every part of Maildeno. The editor produces it, the renderer consumes it, the hosted API serves it, and all three validate it. This page is the contract.
+
+[.pill-muted]#Schema {template-schema-version}#
+
+== The shape
+
+[source,json]
+----
+{
+  "template_id": "welcome_to_premium",
+  "template_name": "Welcome to Premium",
+  "canvas": { "backgroundColor": "#ffffff", "width": 600 },
+  "rows": [],
+  "schema_version": "1.0"
+}
+----
+
+Five top-level keys. All five are required, and validation reports every missing one together rather than the first:
+
+[source,text]
+----
+Template from welcome.json is missing required field(s): canvas, rows.
+Expected a Maildeno template export
+({ template_id, template_name, canvas, rows, schema_version }).
+----
+
+[.table-scroll, cols="1,1,3", options=header]
+|===
+|Field|Type|Description
+
+|`template_id`
+|`string`
+|Yours to choose. A UUID from the hosted dashboard, a slug, or anything else. `renderToResult` echoes it back.
+
+|`template_name`
+|`string`
+|Human-readable label. Shown in the editor and echoed by `renderToResult`.
+
+|`canvas`
+|`object`
+|The email body's own settings — width, padding, background, preheader, language. **Not** an HTML `<canvas>`.
+
+|`rows`
+|`array`
+|Ordered row definitions. The document tree.
+
+|`schema_version`
+|`string`
+|`major.minor`. Compared on the major only.
+|===
+
+== Schema versioning
+
+Only the **major** is compared. `1.7` renders under any `1.x` renderer; `2.0` is rejected with a message telling you to upgrade.
+
+A minor bump means additive, backward-compatible changes. Rejecting those would break templates that render perfectly well.
+
+[source,text]
+----
+Template from welcome.json: schema_version "2.0" is newer than this
+renderer supports (1.x). Upgrade @maildeno/renderer.
+----
+
+== The canvas object
+
+Email-body settings. Every key has a default, so a minimal canvas is `{}`.
+
+[.table-scroll, cols="1,1,1,3", options=header]
+|===
+|Key|Type|Default|Description
+
+|`width`
+|`number`
+|`600`
+|Body width in pixels. 600 is the long-standing safe maximum for email.
+
+|`backgroundColor`
+|`string`
+|`"#ffffff"`
+|The email body's own background.
+
+|`bodyBackgroundColor`
+|`string`
+|`"#f9fafb"`
+|The area *around* the body, visible in clients that show it.
+
+|`bodyBackgroundImage`
+|`string`
+|`""`
+|Optional background image URL.
+
+|`bodyBackgroundSize`
+|`string`
+|`"cover"`
+|CSS `background-size`.
+
+|`bodyBackgroundPosition`
+|`string`
+|`"center center"`
+|CSS `background-position`.
+
+|`bodyBackgroundRepeat`
+|`string`
+|`"no-repeat"`
+|CSS `background-repeat`.
+
+|`padding`
+|`object`
+|`{ top: 0, right: 0, bottom: 0, left: 0 }`
+|Body padding in pixels.
+
+|`preheaderText`
+|`string`
+|`"View this email in your browser"`
+|The grey line after the subject in the inbox.
+
+|`language`
+|`string`
+|`"en-US"`
+|Sets `lang` on the document. Required for screen readers to choose a voice.
+
+|`mobileBreakpoint`
+|`number`
+|`600`
+|Width below which mobile overrides apply.
+|===
+
+TIP: `preheaderText` is the most under-used 90 characters in email. If you leave it at the default, recipients see "View this email in your browser" in their inbox preview instead of something useful.
+
+== The node tree
+
+[source,text]
+----
+Template
+└── rows: Row[]
+    └── columns: Column[]
+        └── children: (Component | NestedRow | RowSpacer)[]
+            └── Component { id, type, componentType?, props }
+----
+
+Nesting is capped at **depth 5**, enforced both by the editor's canvas guard and by the export engine. Past that depth, nested-table layout starts producing gaps in Outlook that nobody can explain.
+
+=== A worked example
+
+[source,json]
+----
+{
+  "template_id": "welcome",
+  "template_name": "Welcome",
+  "canvas": { "backgroundColor": "#ffffff", "width": 600 },
+  "schema_version": "1.0",
+  "rows": [
+    {
+      "id": "row-1",
+      "columns": [
+        {
+          "id": "col-1",
+          "width": 12,
+          "children": [
+            {
+              "id": "c-1",
+              "type": "heading",
+              "props": {
+                "content": "Welcome, {{ text.first_name }}!",
+                "level": 1
+              }
+            },
+            {
+              "id": "c-2",
+              "type": "paragraph",
+              "props": { "content": "Thanks for upgrading." }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+----
+
+=== Two column shapes
+
+Columns support two shapes. The current one uses `children`; an older one uses `components`. Every consumer reads:
+
+[source,typescript]
+----
+const items = column.children ?? column.components ?? []
+----
+
+Likewise a component's type is read as `component.componentType ?? component.type`.
+
+CAUTION: Do not remove either fallback in code that consumes this format. Templates saved by earlier editor versions rely on both.
+
+== Built-in component types
+
+[.table-scroll, cols="1,3", options=header]
+|===
+|`type`|Renders as
+
+|`paragraph`
+|Rich-text body copy
+
+|`heading`
+|`h1`–`h6`
+
+|`image`
+|`<img>`, optionally wrapped in a link
+
+|`video`
+|Thumbnail with a play overlay — email clients do not play video
+
+|`list`
+|Ordered or unordered list
+
+|`button`
+|A styled `<a>`, not a `<button>` — `<button>` does not work in email
+
+|`anchor`
+|Inline text link
+
+|`divider`
+|Horizontal rule
+
+|`spacer`
+|Fixed vertical space
+
+|`menu`
+|Horizontal navigation row
+
+|`socials`
+|Social icon row
+|===
+
+Your own types registered with `registerBlock()` appear here too and serialise the same way. See xref:opensource:editor-blocks.adoc[Custom blocks].
+
+== Merge tags in content
+
+Merge tags are group-qualified tokens embedded in string props:
+
+[source,json]
+----
+{ "content": "Welcome, {{ text.first_name }}!" }
+{ "href": "{{ url.cta }}" }
+{ "alt": "{{ attr.hero_alt }}" }
+----
+
+[cols="1,2,2", options=header]
+|===
+|Group|Substituted into|Escaping
+
+|`text`
+|Paragraphs, headings, buttons, list items
+|HTML-escaped
+
+|`url`
+|`href`, `src`
+|URL-encoded
+
+|`attr`
+|HTML attribute values
+|HTML-escaped
+|===
+
+WARNING: The prefix is not decoration. An unprefixed `{{ first_name }}` will not resolve, and a URL placed in the `text` group is HTML-escaped rather than URL-encoded — which breaks any value containing `&`.
+
+A **pipe default** supplies a fallback when no value is provided:
+
+[source,text]
+----
+{{ text.first_name|'there' }}
+----
+
+This matters most in image `alt` text. An unguarded `alt="{{ attr.product_name }}"` with no value resolves to `alt=""`, which tells assistive technology the image is decorative. It is not.
+
+== Visibility rules
+
+Rows and components can carry a `visibility` object evaluated against the `context` passed at render time:
+
+[source,json]
+----
+{
+  "id": "row-2",
+  "visibility": {
+    "enabled": true,
+    "match": "all",
+    "rules": [
+      { "tag": "plan",     "operator": "equals",     "value": "premium" },
+      { "tag": "is_trial", "operator": "not_equals", "value": "true" }
+    ]
+  },
+  "columns": []
+}
+----
+
+[cols="1,3", options=header]
+|===
+|Key|Meaning
+
+|`enabled`
+|Whether the rule set is active. `false` means always visible.
+
+|`match`
+|`"all"` (AND) or `"any"` (OR).
+
+|`rules`
+|The conditions. Each names a context key, an operator, and a value.
+|===
+
+Context values are **never** injected into content. They only decide what is shown. See xref:builder:visibility-rules.adoc[Visibility rules] for the operator reference.
+
+== Optimize and hydrate
+
+Export does not write the in-memory tree verbatim. Two paired operations bracket it:
+
+* **optimize** — strips every property equal to its default before serialising. A row with no background, no border and default padding serialises to almost nothing.
+* **hydrate** — restores every stripped default on import.
+
+The invariant is `hydrate(optimize(x)) ≡ x`.
+
+[IMPORTANT]
+====
+If you fork the editor and add a property with a default value, you must touch **both** operations. Adding it to one only means the property silently resets on reload — a bug that is very hard to trace back to its cause.
+====
+
+The practical consequence for you: a template file is much smaller than the in-memory document, and a hand-written template only needs the fields that differ from the defaults.
+
+== Validating a template yourself
+
+The renderer validates before every render, so you rarely need to. If you are accepting uploaded templates, these are the checks it performs, in order:
+
+. is an object — not `null`, not an array
+. all five required fields are present
+. `template_id` is a string
+. `template_name` is a string
+. `rows` is an array
+. `canvas` is an object
+. `schema_version` is a string
+. the major parses as a number
+. the major is not newer than the renderer supports
+
+[source,typescript]
+----
+import { render, RenderError } from "@maildeno/renderer"
+
+try {
+  await render(uploaded, { mergeTags: {}, context: {} })
+} catch (err) {
+  if (err instanceof RenderError && err.code === "INVALID_TEMPLATE") {
+    // err.message names the offending field
+    return res.status(400).json({ error: err.message })
+  }
+  throw err
+}
+----
+
+Loading and validation are deliberately not exported from the renderer. Every render path already runs them, so there is no way to reach the engine with an unvalidated document.
+
+== Where to go next
+
+* xref:opensource:renderer.adoc[`@maildeno/renderer`] — render this document
+* xref:opensource:editor.adoc[`@maildeno/editor`] — produce it
+* xref:builder:merge-tags.adoc[Merge tags] — the authoring side
+* xref:builder:visibility-rules.adoc[Visibility rules] — the operator reference

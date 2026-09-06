@@ -1,0 +1,365 @@
+= ESP syntaxes and merge tags
+:description: The 14 built-in ESP conditional syntaxes, how to register your own, and how to make custom merge tags discoverable in the picker.
+:keywords: registerESPSyntax, registerMergeTags, klaviyo, mailchimp, braze, liquid, handlebars
+
+[.lead]
+Conditional content can be resolved by Maildeno before sending, or emitted as your ESP's own template syntax for it to evaluate at send time. The editor speaks 14 syntaxes out of the box, and `registerESPSyntax()` adds any it does not.
+
+== Prune or wrap
+
+Two modes, and choosing deliberately matters more than which one you pick.
+
+[.table-scroll, cols="1,2,2", options=header]
+|===
+| |Prune|Wrap
+
+|Who evaluates
+|Maildeno, before the email leaves your system
+|Your ESP, at their send time
+
+|How
+|`editor.getHtml("prune")` or `render(t, { context })`
+|`editor.getHtml("wrap")`
+
+|Output
+|Only the matching branches
+|Every branch, plus `{% if %}` syntax
+
+|ESP requirement
+|None
+|Must support the emitted syntax
+
+|Data lives in
+|Your database
+|The ESP
+|===
+
+Use **prune** when the personalisation data lives in your database. The email is smaller and simpler, and your ESP needs no conditional support at all.
+
+Use **wrap** when the data lives in the ESP — a Klaviyo profile property, a Braze custom attribute — and Maildeno has no way to know it at export time.
+
+NOTE: Most teams end up wrapping because it is what their ESP's own editor produced, then discover their conditions cannot express what they need. The two modes compose: prune what you own, wrap what you do not.
+
+== The 14 built-in syntaxes
+
+[.table-scroll, cols="1,1,1,1", options=header]
+|===
+|ID|Label|Family|Nesting
+
+|`handlebars`
+|Handlebars (Generic)
+|handlebars
+|Yes
+
+|`sendgrid`
+|SendGrid
+|handlebars
+|Yes
+
+|`iterable`
+|Iterable
+|handlebars
+|Yes
+
+|`mailchimp`
+|Mailchimp
+|custom
+|**No**
+
+|`klaviyo`
+|Klaviyo
+|liquid
+|Yes
+
+|`liquid`
+|Liquid (Generic)
+|liquid
+|Yes
+
+|`braze`
+|Braze
+|liquid
+|Yes
+
+|`hubspot`
+|HubSpot
+|liquid
+|Yes
+
+|`sfmc`
+|Salesforce Marketing Cloud
+|ampscript
+|Yes
+
+|`activecampaign`
+|ActiveCampaign
+|custom
+|Yes
+
+|`marketo`
+|Marketo
+|custom
+|Yes
+
+|`campaign_monitor`
+|Campaign Monitor
+|custom
+|**No**
+
+|`pardot`
+|Pardot / MCAE
+|custom
+|**No**
+
+|`mso`
+|Outlook (MSO)
+|mso
+|**No**
+|===
+
+=== Why four of them cannot nest
+
+`supportsNesting: false` is not a limitation of Maildeno — it reflects what the syntax itself can express:
+
+* **Mailchimp** — `+*|IF|*+` tags must be *nested*, not joined with AND/OR, so a two-condition rule becomes two wrapped blocks rather than one compound expression.
+* **Campaign Monitor** and **Pardot** — support only basic `Tag = Value` logic.
+* **MSO** — VML conditional comments have no runtime boolean logic at all. They select on the *client*, not on data.
+
+When you build a rule the selected syntax cannot express, the editor tells you rather than emitting an expression that means something subtly different.
+
+== Registering your own
+
+[source,typescript]
+----
+import { registerESPSyntax } from "@maildeno/editor"
+
+registerESPSyntax(
+  "my-esp",
+  {
+    label: "My ESP",
+    group: "liquid",                         // handlebars | liquid | ampscript | custom | mso
+    description: "Conditional syntax for My ESP",
+    supportsNesting: true,
+  },
+  {
+    wrapOpenTag:  (expression) => `{% if ${expression} %}`,
+    wrapCloseTag: ()           => `{% endif %}`,
+    wrapMergeTag: (key, fallback) =>
+      fallback
+        ? `{{ ${key} | default: "${fallback}" }}`
+        : `{{ ${key} }}`,
+  },
+)
+----
+
+[cols="1,1,3", options=header]
+|===
+|Argument|Required|Purpose
+
+|`id`
+|Yes
+|The value stored in the template and shown in the syntax picker.
+
+|`meta`
+|Yes
+|Label, family, description, and whether the syntax can nest conditions.
+
+|`overrides`
+|No
+|Per-function replacements. Anything omitted falls through to the generic behaviour.
+|===
+
+=== Why `meta` is required
+
+Every function in the conditional pipeline already has a graceful default case for an unrecognised syntax — generic `t == 'value'` expressions, `&&`/`||` joining, `{{#if}}`/`{{/if}}` tags.
+
+The one genuine crash was an unconditional metadata lookup: reading `supportsNesting` off `undefined` throws. So `meta` is required not to build a fallback system, but to make the existing one reachable instead of crashing before it is ever used.
+
+=== What the generic fallback covers
+
+[cols="1,3", options=header]
+|===
+|Operator|Generic fallback quality
+
+|`equals` / `not_equals`
+|Correct
+
+|`is_set` / `is_not_set`
+|Correct
+
+|`contains` / `not_contains`
+|**Approximate** — falls back to equality
+
+|Date comparisons
+|**Approximate** — falls back to equality
+|===
+
+CAUTION: The generic path is honest but imperfect. If your ESP needs correct `contains` or date semantics, supply `wrapOpenTag` and build the expression yourself. Documenting where a fallback stops is more useful than pretending it is complete.
+
+=== Listing registered syntaxes
+
+[source,typescript]
+----
+import { getRegisteredCustomESPs } from "@maildeno/editor"
+
+getRegisteredCustomESPs()
+// → [{ id: "my-esp", meta: { label: "My ESP", … } }]
+----
+
+Registered entries appear in the syntax picker alongside the 14 built-ins.
+
+== A worked example
+
+Suppose your platform uses a bracket syntax with an explicit `endif`:
+
+[source,text]
+----
+[[if plan == "premium"]] … [[endif]]
+[[ customer.first_name | "there" ]]
+----
+
+[source,typescript]
+----
+registerESPSyntax(
+  "acme-mail",
+  {
+    label: "Acme Mail",
+    group: "custom",
+    description: "Acme Mail bracket conditionals",
+    supportsNesting: true,
+  },
+  {
+    wrapOpenTag:  (expr) => `[[if ${expr}]]`,
+    wrapCloseTag: ()     => `[[endif]]`,
+    wrapMergeTag: (key, fallback) =>
+      fallback ? `[[ ${key} | "${fallback}" ]]` : `[[ ${key} ]]`,
+  },
+)
+----
+
+A rule of "plan equals premium AND country not equals US" then exports as:
+
+[source,text]
+----
+[[if plan == 'premium' && country != 'US']]
+  …row content…
+[[endif]]
+----
+
+If you had set `supportsNesting: false`, the same rule would emit two nested single-condition blocks instead.
+
+== Merge tag registration
+
+`registerMergeTags()` solves a narrower problem than the ESP registry, and it is worth being clear about which.
+
+**Arbitrary tag names already work.** Any tag not in the built-in system map falls through to a generic transform that handles it correctly for every known ESP syntax. Registration does not fix a correctness gap.
+
+What it fixes is **discoverability**. Without registration, your own fields never appear in the "Common tags" picker, so a user would have to already know to type `{{ order_total }}` by hand.
+
+[source,typescript]
+----
+import { registerMergeTags } from "@maildeno/editor"
+
+registerMergeTags([
+  { key: "customer.first_name" },
+  { key: "customer.company" },
+  { key: "order.total" },
+  { key: "order.item_count" },
+  { key: "loyalty.points" },
+])
+----
+
+They now appear in the picker, and users insert them by clicking.
+
+TIP: A capability nobody can find is a capability nobody has. This is the cheapest possible improvement to an editor integration — five lines, and your team stops asking what the tag names are.
+
+=== Per-ESP token overrides
+
+Only needed for a tag that requires genuinely ESP-specific output — the same category the built-in system tags cover. Most registrations omit this.
+
+[source,typescript]
+----
+registerMergeTags([
+  {
+    key: "loyalty.points",
+    tokens: {
+      klaviyo: "{{ person.loyalty_points|default:0 }}",
+      braze:   "{{${loyalty_points}}}",
+    },
+  },
+])
+----
+
+Any syntax you do not list falls through to the generic transform.
+
+[source,typescript]
+----
+import { getRegisteredMergeTagIds } from "@maildeno/editor"
+
+getRegisteredMergeTagIds()   // → ["customer.first_name", "order.total", …]
+----
+
+== Merge tag groups
+
+Independently of ESP syntax, tags in template content are group-qualified. The prefix decides escaping:
+
+[cols="1,2,2", options=header]
+|===
+|Group|Substituted into|Escaping
+
+|`text`
+|Paragraphs, headings, buttons, list items
+|HTML-escaped
+
+|`url`
+|`href`, `src`
+|URL-encoded
+
+|`attr`
+|HTML attribute values
+|HTML-escaped
+|===
+
+WARNING: A URL placed in the `text` group is HTML-escaped rather than URL-encoded and will break on any value containing `&`. This is the single most common merge-tag bug.
+
+A **pipe default** supplies a fallback:
+
+[source,text]
+----
+{{ text.first_name|'there' }}
+{{ attr.product_name|'Product image' }}
+----
+
+The second matters more than it looks. An unguarded merge tag in image `alt` that receives no value resolves to `alt=""`, which tells assistive technology the image is decorative. One character of pipe default turns the failure mode from "invisible" into "slightly generic".
+
+== Registration timing
+
+All three registries are module-level:
+
+[source,typescript]
+----
+// register.ts — imported before anything mounts the editor
+import { registerBlock, registerESPSyntax, registerMergeTags } from "@maildeno/editor"
+
+registerMergeTags([...])
+registerESPSyntax("acme-mail", meta, overrides)
+registerBlock(productCard)
+----
+
+[source,typescript]
+----
+// app entry
+import "./register"
+import { init } from "@maildeno/editor/init"
+
+await init({ container: "#editor" })
+----
+
+IMPORTANT: Registering after mount does not work — the sidebar and pickers are built from the registries at mount time.
+
+== Where to go next
+
+* xref:builder:visibility-rules.adoc[Visibility rules] — authoring conditions in the editor
+* xref:builder:merge-tags.adoc[Merge tags] — the authoring side
+* xref:opensource:editor-blocks.adoc[Custom blocks] — the other main extension point
+* xref:opensource:editor-api.adoc[Editor API reference]

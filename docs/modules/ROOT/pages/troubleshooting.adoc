@@ -1,0 +1,294 @@
+= Troubleshooting
+:description: Symptoms, causes and fixes for the problems that come up most often with the Maildeno editor, renderer, and SDKs.
+:keywords: maildeno troubleshooting, editor not rendering, TEMPLATE_NOT_FOUND, merge tag not working
+
+[.lead]
+Organised by symptom, because that is what you have when you arrive. Each entry names the cause rather than just the fix, so the next one is easier to diagnose.
+
+== Editor
+
+=== The editor mounts but nothing renders
+
+**Cause:** the container has no height.
+
+The editor fills its container. A container with no height renders a zero-pixel editor, which looks identical to a broken package.
+
+[source,css]
+----
+#editor { height: 100vh; }   /* or a sized flex parent */
+----
+
+=== Toolbars, dropdowns and colour pickers appear in the wrong place
+
+**Cause:** an ancestor has `transform`, `filter`, `perspective` or `will-change`.
+
+Any of those creates a containing block for `position: fixed`, so fixed-position floating UI positions relative to that ancestor rather than the viewport. This is a CSS rule, not a Maildeno bug, and it affects every embedded component.
+
+The usual culprit is a `transform: translateZ(0)` added years ago as a scroll-performance fix. Remove it from ancestors of the editor container, or move the editor outside that subtree.
+
+=== The Save button does not appear
+
+**Cause:** no `onSave` handler was provided.
+
+Save is gated on handler presence, not a config flag. Without one you get a genuinely read-only editor — no button, no save-status indicator, no autosave timer.
+
+[source,typescript]
+----
+await init({ container: "#editor", onSave: ({ templateId }) => { /* … */ } })
+----
+
+To observe saves without doing work there, pass a no-op `onSave` to enable saving and attach `handle.on("save", …)`.
+
+=== The Save button appears but the callback never fires
+
+**Cause:** you set `onSave` as a property on the custom element.
+
+Vue's `defineCustomElement` treats props beginning with `on` as event listeners, not props, so `el.onSave = fn` never reaches the component.
+
+[source,typescript]
+----
+el.saveHandler = fn          // custom element
+// or use init(), which handles this for you
+----
+
+Vue hosts should use `@save`.
+
+=== My theme has no effect
+
+**Cause:** you are setting CSS variables on `:root` in your own stylesheet.
+
+Theme tokens are written to the editor's own root element. A custom property declared *on* an element beats any value inherited from an ancestor, at any specificity — so the package defaults on the editor root shadow anything set on `:root`.
+
+Use the `theme` prop or `handle.setTheme()`. See xref:opensource:editor-theming.adoc[Theming].
+
+=== A registered block does not appear in the sidebar
+
+Two possible causes.
+
+**No icon.** A block with no `icon` still works but has no sidebar entry — it can only be added programmatically. Add an SVG string.
+
+**Registered after mount.** All registries are module-level and read at mount time. Call `registerBlock` at import time, before `init()`.
+
+=== A custom block renders as nothing in the exported email
+
+**Cause:** one of the three `renderEmail` functions is missing or returns an empty string.
+
+The export generators dispatch on type with no default case, so an unmapped type produces an empty string silently. Check all three targets — HTML, MJML and React Email — not just the one you looked at.
+
+=== The saved-templates panel lists the wrong templates
+
+**Cause:** a partial adapter. You implemented `saveTemplate` but not `listTemplates`, so the panel falls back to `localStorage`.
+
+The adapter merge is per-method, not per-area. The editor warns about this specific mismatch in development.
+
+=== Images work in the test send and break weeks later
+
+**Cause:** `uploadImage` returned a signed URL that expires.
+
+Email clients fetch images from arbitrary networks long after a send. The URL must be publicly reachable without authentication, permanently.
+
+=== A saved row changes when I edit the copy on the canvas
+
+**Cause:** `cloneSavedRowForCanvas` returned the stored object rather than a clone. Use `structuredClone`.
+
+=== The editor shows a "desktop only" notice
+
+Expected. The editor is desktop-only below the breakpoint and shows a notice rather than attempting mobile drag-and-drop. Use `brandName` to control the wordmark, or pass an empty string to drop the attribution line.
+
+== Renderer
+
+=== `TEMPLATE_NOT_FOUND` mentioning "no file system"
+
+**Cause:** you passed a path in a browser or edge runtime.
+
+There is no filesystem there. Read the template yourself — `fetch()`, a KV/R2 binding, a bundler JSON import — and pass the parsed object.
+
+[source,typescript]
+----
+const template = await env.TEMPLATES.get("welcome", "json")
+await render(template, { /* … */ })
+----
+
+=== `TEMPLATE_NOT_FOUND` naming a directory you did not expect
+
+Expected behaviour: the error names the **resolved** path, not the input, because the useful question is which directory was searched.
+
+Relative paths resolve against `baseDir`, which defaults to the process working directory — not the file that called `render`.
+
+[source,typescript]
+----
+await render("welcome.json", { baseDir: "/srv/app/templates" })
+----
+
+=== `TEMPLATE_NOT_FOUND` saying a path resolves outside the base directory
+
+Expected behaviour: `baseDir` is a security boundary. A relative path resolving outside it is rejected rather than read.
+
+If it is intentional, pass an absolute path or widen `baseDir`.
+
+=== `INVALID_TEMPLATE`
+
+The message names the offending field. Common cases:
+
+[cols="1,3", options=header]
+|===
+|Message mentions|Cause
+
+|missing required field(s)
+|Not a Maildeno export. All five top-level keys are required.
+
+|is not an object
+|You passed a JSON string rather than a parsed object, or an array.
+
+|`rows` must be an array
+|The document is malformed, or you passed a `TemplateSnapshot` (which has `rows` plus `canvasStyles`) instead of a template document.
+
+|`schema_version` is newer than this renderer supports
+|Upgrade `@maildeno/renderer`. Only the major is compared, so `1.7` is fine under `1.x`.
+|===
+
+=== `RENDER_ERROR` mentioning engine.wasm
+
+**In Node:** the file did not ship next to the compiled JS. The error lists both paths that were searched. Check your bundler is not stripping non-JS assets from `node_modules`.
+
+**At the edge:** the runtime does not expose `WebAssembly` or blocks compilation. Every supported runtime does — if this is a browser, check for a restrictive `Content-Security-Policy`.
+
+=== A merge tag renders as empty
+
+**Cause, most likely:** the tag in the template is not group-qualified.
+
+[source,text]
+----
+{{ first_name }}          ← will not resolve
+{{ text.first_name }}     ← correct
+----
+
+**Cause, also likely:** the key you supplied does not match the tag name. An unmatched tag is **removed**, not left visible, so a typo disappears silently.
+
+[source,typescript]
+----
+const html = await render(tpl, { mergeTags: { text: { first_name: name } } })
+if (!html.includes(name)) throw new Error("first_name did not render")
+----
+
+=== A link breaks when the value contains `&`
+
+**Cause:** the URL was supplied in the `text` group, which HTML-escapes. Move it to `url`, which URL-encodes.
+
+[source,typescript]
+----
+mergeTags: { url: { cta: "https://x.com/a?b=1&c=2" } }
+----
+
+=== A row that should be hidden still renders
+
+Three things to check.
+
+**Is `context` supplied?** Rules with no context to evaluate against cannot match.
+
+**Do the value types match?** Context values are strings, numbers or booleans, and `"false"` is not `false`.
+
+**Are you in the right mode?** `render()` always prunes. If your template was exported in **wrap** mode, the branches are already baked in as ESP syntax and the renderer will not remove them.
+
+=== Works locally, fails on deploy
+
+**Cause:** different builds. Local dev may resolve the Node build while production resolves the edge build.
+
+Test with `wrangler dev` or `vercel dev`, which run the real runtime. A plain Node dev server hides path-versus-object bugs until deploy.
+
+=== Outlook fallbacks disappeared after minification
+
+**Cause:** a general-purpose HTML minifier stripped comments.
+
+`+<!--[if mso]>+` is a comment that changes rendering. The renderer's own minifier deliberately never touches comments; a third-party one probably will.
+
+== Email output
+
+=== Gmail shows "View entire message"
+
+The message exceeded roughly 102 KB and was clipped. What gets cut is whatever is at the bottom — usually the unsubscribe link and tracking pixel, so compliance and analytics break together.
+
+Usual causes: a large `<style>` block, or base64-inlined images. Link images rather than inlining them.
+
+=== A white logo turns black in Outlook dark mode
+
+Expected client behaviour, not a rendering bug. Outlook 2019+ and Outlook.com swap colours close to pure black or pure white; brand colours are left alone.
+
+Fix by avoiding pure white or pure black in logos, or supplying a dark-mode-specific asset.
+
+=== Spacing looks right everywhere except Outlook
+
+**Cause:** margin. `padding` on a `<td>` is reliable; margin is not. Use `<td>` padding or a spacer row, and `mso-padding-alt` where Word needs a hint.
+
+=== Fonts render as Arial for some recipients
+
+Expected. Web fonts work in Apple Mail and a few others, and fail silently everywhere else, falling back to the next family in the stack.
+
+Always write a complete stack ending in a generic:
+
+[source,css]
+----
+font-family: 'Inter', -apple-system, 'Segoe UI', Arial, sans-serif;
+----
+
+=== A gradient renders as a flat colour in Outlook
+
+Expected. Outlook desktop needs VML for gradients and background images — there is no CSS path. The export pipeline emits the VML fallback; if you are hand-writing markup, you need the `+<!--[if mso]><v:rect>+` wrapper yourself.
+
+== SDKs
+
+=== `INVALID_API_KEY`
+
+The key is wrong, revoked, or from a different environment. Keys are shown once at creation — if you did not copy it, create a new one.
+
+=== `FORBIDDEN` on one target but not another
+
+The key is scoped. A key with `targets: ["html"]` returns 403 for React Email. See xref:sdk:api-keys.adoc[API key scopes].
+
+=== `NETWORK_ERROR` or `TIMEOUT` on every call
+
+The first call for a template fetches its JSON. Check outbound access to `{api-base-url}` from your environment, and any egress proxy in front of it. Subsequent renders are local.
+
+=== Rendering is slower than expected
+
+The first call per template per TTL window fetches over the network; the rest render locally from cache. If every call is slow, the cache is not persisting — likely a serverless environment where memory cache does not survive between invocations. Enable the disk cache. See xref:sdk:js-caching.adoc[Caching].
+
+== Build and bundling
+
+=== `fs is not defined`, or a `node:` import error at build time
+
+Your bundler resolved the Node build for a browser or edge target. Confirm it honours `package.json` export conditions, and that you have not aliased the package manually.
+
+=== TypeScript cannot find the types
+
+[source,jsonc]
+----
+{ "compilerOptions": { "moduleResolution": "bundler" } }
+----
+
+`node10`-style resolution does not understand the `exports` map, so subpath imports like `@maildeno/editor/init` will not type-check.
+
+=== A JSON template import fails to type-check
+
+[source,jsonc]
+----
+{ "compilerOptions": { "resolveJsonModule": true } }
+----
+
+=== The Worker bundle is over the size limit
+
+The edge build embeds the engine as base64, roughly 90 KB brotli. Check with:
+
+[source,bash]
+----
+npx wrangler deploy --dry-run --outdir=dist
+----
+
+If it is genuinely the constraint, `@maildeno/renderer/core` with Wrangler's native `.wasm` import uploads the engine as a separate module. See xref:opensource:renderer-edge.adoc[Browsers and edge runtimes].
+
+== Still stuck
+
+* Search or open an issue on {editor-repo}/issues[editor] or {renderer-repo}/issues[renderer]
+* Email mailto:{support-email}[{support-email}]
+
+When reporting a rendering problem, include the package version, the runtime, the `RenderError` code, and the template's `schema_version`. Those four answer most questions immediately.

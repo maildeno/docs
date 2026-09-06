@@ -1,0 +1,578 @@
+/* =========================================================
+   brand.css — Maildeno dark sage green brand layer
+   ---------------------------------------------------------
+   Loaded AFTER site.css in layouts/default.hbs.
+
+   This file overrides the design tokens declared in the UI
+   bundle's site.css. It deliberately does not restate the
+   bundle's layout, spacing or component rules — only the
+   colour tokens and the handful of components that had a
+   violet value hard-coded rather than tokenised.
+
+   Keeping the override in a separate file means the UI
+   bundle can be regenerated without losing the brand, and
+   the whole rebrand is reviewable as one diff.
+
+   ── Contrast ────────────────────────────────────────────
+   Every foreground/background pair below meets WCAG 2.1 AA
+   (4.5:1 for body text, 3:1 for large text and UI borders).
+   Measured values are noted inline so a future change can
+   be checked against them rather than guessed at.
+   ========================================================= */
+
+/* ─────────────────────────────────────────────────────────
+   LIGHT MODE
+   ───────────────────────────────────────────────────────── */
+:root {
+  /* ── Surfaces ──────────────────────────────────────────
+     Light surfaces keep a slight sage tint so the chrome
+     reads as part of the brand rather than a default. */
+  --color-bg:          #ffffff;
+  --color-surface:     #f6f8f6;
+  --color-surface-2:   #ecf1ee;
+  --color-border:      #dde5e0;
+  --color-border-2:    #c6d2ca;
+
+  /* ── Text ──────────────────────────────────────────────
+     text is the brand body colour: a sage-cast grey, not a
+     near-black. Softer than a default #111, which is the
+     point — but it means headings need their own token to
+     keep any hierarchy (see --color-heading below).
+
+     heading    14.53:1 on #ffffff
+     text        7.66:1  ← brand body colour
+     text-2      5.96:1
+     text-muted  4.80:1  (body-text safe)
+     text-faint  2.63:1  (decorative only — never body copy) */
+  --color-heading:     #232b26;
+  --color-text:        #4b564e;
+  --color-text-2:      #5c665f;
+  --color-text-muted:  #6a756d;
+  --color-text-faint:  #98a29b;
+
+  /* ── Brand accent — dark sage ──────────────────────────
+     accent    7.21:1 on #ffffff  (link text, AA + AAA)
+     accent-h  8.91:1
+     white on accent  7.21:1      (primary button)
+     accent on accent-bg 6.41:1   (badges, active nav) */
+  --color-accent:      #3f5e4a;
+  --color-accent-h:    #33503e;
+  --color-accent-bg:   #edf3ee;
+  --color-accent-bg-h: #dfeae2;
+
+  /* Softer sage for rules, focus rings and dividers that
+     should register without competing with the accent. */
+  --color-accent-soft: #7c9c88;
+  --color-accent-ring: rgb(63 94 74 / .18);
+
+  /* ── Code ──────────────────────────────────────────────
+     Code blocks use the same near-black as dark mode's
+     background, so the site has one dark surface rather
+     than two that almost match. */
+  --color-code-bg:     #0f0f10;
+  --color-code-text:   #dcdcde;
+
+  /* ── Admonition accents ────────────────────────────────
+     Tokenised here because the bundle hard-codes them. */
+  --color-note:        #3f5e4a;
+  --color-tip:         #2f6b4f;
+  --color-warning:     #8a6a1f;
+  --color-caution:     #9b3b32;
+  --color-important:   #7a4b8f;
+
+  /* ── Elevation ─────────────────────────────────────── */
+  --shadow-sm: 0 1px 3px 0 rgb(16 24 20 / .07), 0 1px 2px -1px rgb(16 24 20 / .07);
+  --shadow:    0 4px 6px -1px rgb(16 24 20 / .09), 0 2px 4px -2px rgb(16 24 20 / .09);
+}
+
+/* ─────────────────────────────────────────────────────────
+   DARK MODE
+   The theme key (maildeno_doc_v1) is set by the inline
+   script in layouts/default.hbs and toggled by site.js.
+   ───────────────────────────────────────────────────────── */
+[data-theme="maildeno_doc_v1"] {
+  /* Neutral near-blacks, not green-tinted. The sage lives
+     entirely in the accent here — tinting the greys as well
+     made the whole surface read as one muddy colour. */
+  --color-bg:          #0f0f10;
+  --color-surface:     #17171a;
+  --color-surface-2:   #202024;
+  --color-border:      #292930;
+  --color-border-2:    #38383f;
+
+  /* Text is a translucent white rather than a fixed grey, so
+     it composites correctly over any surface step instead of
+     matching only the base background.
+
+     heading   .92 → 16.22:1 on #0f0f10
+     text      .62 →  7.69:1  ← brand body colour
+     text-2    .55 →  6.24:1
+     muted     .45 →  4.53:1
+     faint     .30 →  2.65:1  (decorative only) */
+  --color-heading:     hsla(0, 0%, 100%, .92);
+  --color-text:        hsla(0, 0%, 100%, .62);
+  --color-text-2:      hsla(0, 0%, 100%, .55);
+  --color-text-muted:  hsla(0, 0%, 100%, .45);
+  --color-text-faint:  hsla(0, 0%, 100%, .30);
+
+  /* The accent inverts rather than merely lightening: a dark
+     sage cannot reach 4.5:1 on a dark background at any
+     usable saturation.
+     accent    8.90:1 on #0f0f10
+     accent-h 10.94:1
+     bg on accent 8.90:1  (primary button) */
+  --color-accent:      #8fbb9c;
+  --color-accent-h:    #a6cdb1;
+  --color-accent-bg:   #16201a;
+  --color-accent-bg-h: #1c2a21;
+
+  --color-accent-soft: #5f7f6b;
+  --color-accent-ring: rgb(143 187 156 / .22);
+
+  --color-code-bg:     #0a0a0b;
+  --color-code-text:   #dcdcde;
+
+  --color-note:        #8fbb9c;
+  --color-tip:         #7fc79f;
+  --color-warning:     #d6b45f;
+  --color-caution:     #e0908a;
+  --color-important:   #c3a0d6;
+
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / .5), 0 1px 2px -1px rgb(0 0 0 / .5);
+  --shadow:    0 4px 6px -1px rgb(0 0 0 / .55), 0 2px 4px -2px rgb(0 0 0 / .55);
+}
+
+/* ═════════════════════════════════════════════════════════
+   COMPONENT OVERRIDES
+   Only for rules where the bundle hard-codes a violet value
+   instead of reading a token.
+   ═════════════════════════════════════════════════════════ */
+
+/* ── Inline code ──────────────────────────────────────────
+   The bundle sets a violet foreground in both themes. */
+.article code:not(pre code) {
+  color: #33503e;
+  background: var(--color-accent-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: .125em .375em;
+  font-size: .875em;
+}
+[data-theme="maildeno_doc_v1"] .article code:not(pre code) {
+  color: #a6cdb1;                 /* 9.05:1 on --color-surface-2 (#202024) */
+  background: var(--color-surface-2);
+  border-color: var(--color-border-2);
+}
+
+/* Inline code inside a link should read as a link, not as
+   two competing colours fighting inside one phrase. */
+.article a code:not(pre code) { color: inherit; }
+
+/* ── Focus rings ──────────────────────────────────────────
+   One ring colour everywhere, driven by the accent, so
+   keyboard focus is unmistakable in both themes. */
+.sidebar__search-input:focus,
+[data-theme="maildeno_doc_v1"] .sidebar__search-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-ring);
+}
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Admonition blocks ────────────────────────────────────
+   Backgrounds derive from the tokens above so the five
+   kinds stay distinguishable without leaving the palette. */
+.article .admonitionblock            { border-left: 3px solid var(--color-note); }
+.article .admonitionblock.note       { border-left-color: var(--color-note);      background: #f2f6f3; }
+.article .admonitionblock.tip        { border-left-color: var(--color-tip);       background: #eff7f2; }
+.article .admonitionblock.warning    { border-left-color: var(--color-warning);   background: #fbf6e9; }
+.article .admonitionblock.caution    { border-left-color: var(--color-caution);   background: #fbefee; }
+.article .admonitionblock.important  { border-left-color: var(--color-important); background: #f7f1fa; }
+
+[data-theme="maildeno_doc_v1"] .article .admonitionblock.note      { background: #141916; }
+[data-theme="maildeno_doc_v1"] .article .admonitionblock.tip       { background: #101d17; }
+[data-theme="maildeno_doc_v1"] .article .admonitionblock.warning   { background: #1c1809; }
+[data-theme="maildeno_doc_v1"] .article .admonitionblock.caution   { background: #1d100e; }
+[data-theme="maildeno_doc_v1"] .article .admonitionblock.important { background: #17101c; }
+
+/* ── Code block title bar ─────────────────────────────────
+   The little filename strip above a listing. */
+.article .listingblock > .title {
+  background: #08080a;
+  color: #85858a;
+  border-bottom: 1px solid #232329;
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  font-style: normal;
+  letter-spacing: .01em;
+  padding: 8px 16px;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+[data-theme="maildeno_doc_v1"] .article .listingblock > .title {
+  background: #060607;
+  color: #78787d;
+  border-bottom-color: #17171a;
+}
+
+/* ── Headings ─────────────────────────────────────────────
+   The bundle points h1–h5 and <strong> at --color-text. Now
+   that --color-text is the softer brand body colour, they
+   need their own token or every heading flattens into the
+   paragraph beneath it.
+   ──────────────────────────────────────────────────────── */
+.article h1,
+.article h2,
+.article h3,
+.article h4,
+.article h5,
+.article h6,
+.article strong,
+.article .tableblock strong { color: var(--color-heading); }
+
+/* The lead paragraph sits between the two weights. */
+.article .paragraph.lead p { color: var(--color-text-2); }
+
+/* ── Tables ───────────────────────────────────────────────
+   Asciidoctor puts class="tableblock" on the <table>, on
+   every <th> and <td>, AND on the <p> inside each cell. Any
+   rule targeting a bare .tableblock therefore hits the cells
+   too — setting display:block on it collapses the entire
+   table into a single stacked column.
+
+   The same trap catches [.table-scroll]: that role lands on
+   the <table> element itself, not on a wrapper, because
+   Asciidoctor generates no wrapper for tables. The bundle's
+   own .table-scroll rule assumes one exists, so it is
+   neutralised here and replaced by a real wrapper element
+   created in js/docs-enhance.js.
+
+   Everything below is scoped to `table.` or to a specific
+   cell element for that reason. Do not loosen these
+   selectors to bare .tableblock.
+   ──────────────────────────────────────────────────────── */
+
+/* Undo the bundle rule: with no wrapper, this lands on the
+   <table> and breaks colgroup percentage widths. */
+.article table.table-scroll {
+  display: table;
+  width: 100%;
+  overflow-x: visible;
+}
+
+.article table.tableblock {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  margin: 20px 0;
+  font-size: .875rem;
+}
+
+.article table.tableblock th,
+.article table.tableblock td {
+  display: table-cell;          /* explicit: guards against a loose rule */
+  vertical-align: top;
+  text-align: left;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+}
+
+/* The <p> Asciidoctor wraps around cell content carries
+   .tableblock as well; it must stay in the normal flow and
+   must not inherit the paragraph bottom-margin. */
+.article table.tableblock p.tableblock {
+  margin: 0;
+  line-height: 1.6;
+}
+.article table.tableblock p.tableblock + p.tableblock { margin-top: 8px; }
+
+/* Header row carries the brand tint. */
+.article table.tableblock thead th {
+  background: var(--color-accent-bg);
+  color: var(--color-heading);
+  border-bottom: 2px solid var(--color-accent-soft);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Zebra striping, light enough to aid scanning without banding. */
+.article table.tableblock tbody tr:nth-child(even) td { background: var(--color-surface); }
+
+/* Asciidoctor's own alignment classes — honoured explicitly
+   so a cols spec like "cols=\"1,^1,>1\"" actually applies. */
+.article table.tableblock .halign-left   { text-align: left; }
+.article table.tableblock .halign-center { text-align: center; }
+.article table.tableblock .halign-right  { text-align: right; }
+.article table.tableblock .valign-top    { vertical-align: top; }
+.article table.tableblock .valign-middle { vertical-align: middle; }
+.article table.tableblock .valign-bottom { vertical-align: bottom; }
+
+/* An empty leading header cell in a comparison table should
+   read as blank, not as a stray bordered box. */
+.article table.tableblock thead th:empty { background: transparent; border-color: transparent; }
+
+/* Keep inline code from forcing a column wider than its share. */
+.article table.tableblock code:not(pre code) {
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* ── The scroll wrapper ───────────────────────────────────
+   Created by js/docs-enhance.js. Without JS the table simply
+   does not scroll, which is the behaviour before this file
+   existed — a graceful degradation, not a regression. */
+.article .table-scroll-wrap {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 20px 0;
+}
+.article .table-scroll-wrap > table.tableblock { margin: 0; }
+
+@media (max-width: 720px) {
+  /* Below this width, three-column comparison tables are
+     unreadable squeezed. Give them a floor and let the
+     wrapper scroll instead of crushing the columns. */
+  .article .table-scroll-wrap > table.tableblock { min-width: 560px; }
+  .article table.tableblock th,
+  .article table.tableblock td { padding: 8px 10px; }
+}
+
+/* ── Landing cards (ROOT/index.adoc) ──────────────────────
+   Defined here rather than in the page so every card on the
+   site picks up brand changes at once. */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin: 28px 0 8px;
+}
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  padding: 20px;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.card:hover {
+  border-color: var(--color-accent-soft);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.card .card-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text);
+  margin-bottom: 6px;
+}
+.card p { color: var(--color-text-muted); font-size: .9rem; margin-bottom: 12px; }
+.card a { font-size: .875rem; font-weight: 600; color: var(--color-accent); }
+.card a:hover { color: var(--color-accent-h); }
+
+/* ── Status pills ─────────────────────────────────────────
+   [.pill]#MIT# — used in package headers and comparison
+   tables to mark license, stability and availability. */
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent-soft);
+  vertical-align: middle;
+}
+.pill-muted  { background: var(--color-surface-2); color: var(--color-text-muted); border-color: var(--color-border-2); }
+.pill-warn   { background: #fbf6e9; color: #7a5d18; border-color: #d9c384; }
+[data-theme="maildeno_doc_v1"] .pill-warn { background: #1d1808; color: #d6b45f; border-color: #4a3d14; }
+
+/* ── Prev/next pagination ─────────────────────────────────── */
+.pagination__item:hover { border-color: var(--color-accent-soft); }
+.pagination__title      { color: var(--color-accent); }
+
+/* ── Sidebar active state ─────────────────────────────────
+   A left rule in the accent marks the current page more
+   legibly than a background tint alone at small sizes. */
+.nav a.is-active,
+.nav a[aria-current="page"] {
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+/* ── Logo ─────────────────────────────────────────────────
+   Two files, one shown per theme. Both are in the DOM so the
+   swap is instant on toggle with no network fetch; the hidden
+   one is aria-hidden in the markup so it is not announced. */
+.topnav__logo .logo { width: 115px; height: auto; }
+.topnav__logo .logo--dark { display: none; }
+[data-theme="maildeno_doc_v1"] .topnav__logo .logo--light { display: none; }
+[data-theme="maildeno_doc_v1"] .topnav__logo .logo--dark  { display: block; }
+
+/* ── Admonition icons ─────────────────────────────────────
+   Asciidoctor emits <i class="fa icon-note"> for the icon
+   cell. The UI bundle never loads Font Awesome, so that cell
+   rendered as ~70px of blank space next to every NOTE, TIP
+   and WARNING. A text label is more legible than the glyph
+   would have been anyway, and costs no extra request.
+   ──────────────────────────────────────────────────────── */
+.article .admonitionblock td.icon {
+  width: auto;
+  padding: 0 0 4px;
+  border: none;
+  vertical-align: top;
+}
+.article .admonitionblock td.icon .fa::after {
+  font-family: var(--font-sans);
+  font-size: .6875rem;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.article .admonitionblock td.icon .icon-note::after      { content: "Note";      color: var(--color-note); }
+.article .admonitionblock td.icon .icon-tip::after       { content: "Tip";       color: var(--color-tip); }
+.article .admonitionblock td.icon .icon-warning::after   { content: "Warning";   color: var(--color-warning); }
+.article .admonitionblock td.icon .icon-caution::after   { content: "Caution";   color: var(--color-caution); }
+.article .admonitionblock td.icon .icon-important::after { content: "Important"; color: var(--color-important); }
+
+/* Stack the label above the text instead of beside it — the
+   side-by-side table layout wastes a fixed column on every
+   admonition, which is expensive at narrow widths. */
+.article .admonitionblock table,
+.article .admonitionblock tbody,
+.article .admonitionblock tr { display: block; width: 100%; }
+.article .admonitionblock td.icon,
+.article .admonitionblock td.content { display: block; width: 100%; }
+.article .admonitionblock td.content {
+  padding: 0;
+  border: none;
+  color: var(--color-text);
+}
+.article .admonitionblock td.content > :last-child { margin-bottom: 0; }
+.article .admonitionblock { padding: 14px 18px; border-radius: 0 var(--radius) var(--radius) 0; }
+
+/* ── Top nav ──────────────────────────────────────────────── */
+.topnav__links a.is-active { color: var(--color-accent); background: var(--color-accent-bg); }
+.topnav__logo-mark { background: var(--color-accent); }
+
+/* ── Blockquotes ──────────────────────────────────────────── */
+.article blockquote,
+.article .quoteblock {
+  border-left: 3px solid var(--color-accent-soft);
+  background: var(--color-surface);
+  padding: 12px 18px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--color-text-2);
+}
+
+/* ── Horizontal rules ─────────────────────────────────────── */
+.article hr { border: none; border-top: 1px solid var(--color-border); margin: 32px 0; }
+
+/* ── Selection ────────────────────────────────────────────── */
+::selection { background: var(--color-accent-bg-h); color: var(--color-text); }
+[data-theme="maildeno_doc_v1"] ::selection { background: #24382c; color: var(--color-heading); }
+
+/* ── Tabs (@asciidoctor/tabs) ─────────────────────────────
+   The upstream tabs.css (vendored alongside this file) hard-codes #fff and
+   #f5f5f5 for the tab strip, which is invisible in dark mode. These rules
+   re-skin it onto the sage tokens. Class names come from the extension —
+   .tablist, li.is-selected, .tabpanel, .tabs.is-loading — so they must not
+   be renamed. brand.css loads after tabs.css, which is what makes these win.
+   ──────────────────────────────────────────────────────── */
+.tabs { margin-bottom: 1.5em; }
+
+.tabs .tablist > ul {
+  border-bottom: 1px solid var(--color-border);
+  gap: 2px;
+}
+.tabs .tablist > ul li {
+  background-color: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: .8125rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  transition: background-color var(--transition), color var(--transition);
+}
+.tabs .tablist > ul li:hover { color: var(--color-text); }
+
+/* is-loading covers the pre-JS state: the first tab is shown as selected so
+   the block never flashes as an undifferentiated list. */
+.tabs.is-loading .tablist > ul li:first-child,
+.tabs:not(.is-loading) .tablist > ul li.is-selected {
+  background-color: var(--color-bg);
+  color: var(--color-accent);
+  border-color: var(--color-border);
+}
+.tabs.is-loading .tablist > ul li:not(:first-child),
+.tabs:not(.is-loading) .tablist > ul li:not(.is-selected) {
+  background-color: var(--color-surface-2);
+}
+/* The ::after strip masks the container border under the active tab. */
+.tabs.is-loading .tablist li:first-child::after,
+.tabs:not(.is-loading) .tablist li.is-selected::after {
+  background-color: var(--color-bg);
+}
+.tabs .tablist > ul li:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+/* The upstream .tabpanel is hard-coded to #fff with a #dcdcdc border, which
+   is a white slab in dark mode. Both follow the tokens instead. */
+.tabs .tabpanel {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0 var(--radius) var(--radius) var(--radius);
+  padding: 18px;
+}
+.tabs .tablist > ul li { border: 1px solid transparent; border-bottom: 0; }
+.tabs.is-loading .tablist > ul li:first-child,
+.tabs:not(.is-loading) .tablist > ul li.is-selected { border-color: var(--color-border); }
+
+/* Code blocks are the usual tab content; drop the doubled margins so the
+   listing sits flush inside the panel. */
+.tabs .tabpanel > :first-child { margin-top: 0; }
+.tabs .tabpanel > :last-child  { margin-bottom: 0; }
+.tabs .tabpanel > .listingblock > .content > pre { margin: 0; }
+
+/* Upstream also styles a .tablecontainer for tables inside tabs. */
+.tabs .tabpanel .tablecontainer { overflow-x: auto; }
+
+/* ── Reduced motion ───────────────────────────────────────
+   The bundle animates theme changes with a wildcard
+   transition; honour the user's preference. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Print ────────────────────────────────────────────────
+   Chrome that has no meaning on paper is dropped, and code
+   blocks invert so they don't consume a toner cartridge. */
+@media print {
+  .topnav, .sidebar, .toc, .pagination, .sidebar-overlay, .theme-toggle { display: none !important; }
+  .layout { display: block; margin: 0; max-width: none; }
+  .main__inner { padding: 0; max-width: none; }
+  .article pre { background: #f4f6f4 !important; color: #232b26 !important; border: 1px solid #ccd6d0; }
+  .article a { color: #232b26; text-decoration: underline; }
+  .article a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .75em; color: #6a756d; }
+}

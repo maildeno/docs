@@ -19,7 +19,7 @@ The simplest approach — Nuxt's built-in `<ClientOnly>` skips a component durin
 ----
 <template>
   <ClientOnly>
-    <EmailEditor :capabilities="{ export: ['html', 'mjml', 'json'] }" />
+    <EmailEditor :capabilities="{ export: ['html', 'mjml', 'json'] }" @save="handleSave" />
     <template #fallback>
       <div style="height: 100vh; display: flex; align-items: center; justify-content: center;">
         Loading editor…
@@ -30,6 +30,14 @@ The simplest approach — Nuxt's built-in `<ClientOnly>` skips a component durin
 
 <script setup lang="ts">
 import { EmailEditor } from "@maildeno/editor";
+
+const editor = ref<InstanceType<typeof EmailEditor> | null>(null);
+
+function handleSave({ templateId }: { templateId: string | null }) {
+  const target = editor.value?.getHtml(); // editor.value?.getReactEmail() or editor.value?.getMjml()
+  console.log("templateId:", templateId);
+  console.log(target);
+}
 </script>
 ----
 
@@ -40,7 +48,7 @@ If you need the `EditorHandle` directly, the pattern is the same as plain Vue �
 [source,vue]
 ----
 <template>
-  <div ref="container" style="height: 100vh" />
+  <div ref="container" />
 </template>
 
 <script setup lang="ts">
@@ -57,6 +65,11 @@ onMounted(async () => {
 
   handle = await init({
     container: container.value!,
+    onSave: (payload: { templateId: string | null }) => {
+      console.log("Saved", payload);
+      const target = handle?.getHtml(); // handle?.getReactEmail() or handle?.getMjml()
+      console.log(target);
+    },
     onSendTestEmail: async ({ to, subject, html }) => {
       await $fetch("/api/send-test", {
         method: "POST",
@@ -64,8 +77,6 @@ onMounted(async () => {
       });
     },
   });
-
-  handle.on("save", ({ templateId }) => console.log("saved:", templateId));
 });
 
 onBeforeUnmount(() => handle?.destroy());

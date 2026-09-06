@@ -22,7 +22,7 @@ An Astro `<script>` block is compiled into its own bundle — it can't close ove
 const { templateId } = Astro.params;
 ---
 
-<div id="editor" style="height: 100vh" data-template-id={templateId}></div>
+<div id="editor" data-template-id={templateId}></div>
 
 <button id="publish">Publish</button>
 
@@ -36,6 +36,15 @@ const { templateId } = Astro.params;
     templateId: el.dataset.templateId || undefined,
     theme: { primaryColor: "#6366f1" },
     capabilities: { export: ["html", "json"] },
+    onSave: (payload: { templateId: string | null }) => {
+      console.log("Saved", payload);
+      const target = handle?.getHtml(); // handle?.getReactEmail() or handle?.getMjml()
+      console.log(target);
+
+      const templateId = payload.templateId;
+      // Keep the URL in sync with the saved template, without a reload.
+      history.replaceState(null, "", `/editor/${templateId}`);
+    },
     onSendTestEmail: async ({ to, subject, html }) => {
       const response = await fetch("/api/send-test", {
         method: "POST",
@@ -49,12 +58,6 @@ const { templateId } = Astro.params;
       }
     },
   });
-
-  handle.on("save", ({ templateId }) => {
-    // Keep the URL in sync with the saved template, without a reload.
-    history.replaceState(null, "", `/editor/${templateId}`);
-  });
-
   document.getElementById("publish")?.addEventListener("click", async () => {
     const html = handle.getHtml();
     if (!html) return; // empty canvas

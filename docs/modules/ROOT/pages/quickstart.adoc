@@ -36,18 +36,21 @@ WARNING: Never commit API keys to source control. Use environment variables or a
 [tabs]
 ====
 JavaScript / TypeScript::
++
 [source,bash]
 ----
 npm install maildeno
 ----
 
 PHP::
++
 [source,bash]
 ----
 composer require maildeno/maildeno
 ----
 
 Python::
++
 [source,bash]
 ----
 pip install maildeno
@@ -60,7 +63,8 @@ Replace `<YOUR_API_KEY>` and `<YOUR_TEMPLATE_ID>` with your actual values.
 
 [tabs]
 ====
-* JavaScript / TypeScript
+JavaScript / TypeScript::
++
 --
 [source,typescript]
 ----
@@ -86,7 +90,8 @@ NOTE: Load your API key from an environment variable — never hard-code it.
 The `name` merge tag fills in the `{{ name }}` placeholder in your template.
 --
 
-* Python (sync)
+Python (sync)::
++
 --
 [source,python]
 ----
@@ -111,7 +116,8 @@ NOTE: Load your API key from an environment variable.
 The `name` merge tag fills in the `{{ name }}` merge tag.
 --
 
-* Python (async)
+Python (async)::
++
 --
 [source,python]
 ----
@@ -131,7 +137,8 @@ asyncio.run(main())
 ----
 --
 
-* PHP
+PHP::
++
 --
 [source,php]
 ----

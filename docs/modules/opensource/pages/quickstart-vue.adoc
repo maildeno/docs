@@ -21,10 +21,18 @@ Simplest path for a Vue 3 + `<script setup>` app:
 ----
 <script setup lang="ts">
 import { EmailEditor } from "@maildeno/editor";
+
+const editor = ref<InstanceType<typeof EmailEditor> | null>(null);
+
+function handleSave({ templateId }: { templateId: string | null }) {
+  const target = editor.value?.getHtml(); // editor.value?.getReactEmail() or editor.value?.getMjml()
+  console.log("templateId:", templateId);
+  console.log(target);
+}
 </script>
 
 <template>
-  <EmailEditor :capabilities="{ export: ['html', 'react-email', 'mjml', 'json'] }" />
+  <EmailEditor :capabilities="{ export: ['html', 'react-email', 'mjml', 'json'] }" @save="handleSave" />
 </template>
 ----
 
@@ -57,11 +65,11 @@ onMounted(async () => {
       primary: "#4a7c59",
       primaryHover: "#3a5a40",
     },
-  });
-
-  handle.on("save", ({ templateId }) => {
-    console.log("Saved:", templateId);
-    console.log(handle?.getHtml());
+    onSave: (payload: { templateId: string | null }) => {
+      console.log("Saved", payload);
+      const target = handle?.getHtml(); // handle?.getReactEmail() or handle?.getMjml()
+      console.log(target);
+    },
   });
 });
 
@@ -72,7 +80,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="container" style="height: 100vh" />
+  <div ref="container" />
 </template>
 ----
 

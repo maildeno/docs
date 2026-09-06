@@ -33,7 +33,7 @@ The editor needs a container with a real, resolved height — a `0px` container 
     </style>
   </head>
   <body>
-    <div id="editor" style="height: 100vh"></div>
+    <div id="editor"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
@@ -49,6 +49,11 @@ import { init } from "@maildeno/editor/init";
 const handle = await init({
   container: "#editor",
   capabilities: { export: ["html", "mjml", "json"] },
+  onSave: (payload: { templateId: string | null }) => {
+    console.log("Saved", payload);
+    const target = handle?.getHtml(); // handle?.getReactEmail() or handle?.getMjml()
+    console.log(target);
+  },
   onSendTestEmail: async ({ to, subject, html }) => {
     await fetch("/api/send-test", {
       method: "POST",
@@ -58,10 +63,6 @@ const handle = await init({
   },
 });
 
-handle.on("save", ({ templateId }) => {
-  console.log("saved:", templateId);
-  console.log(handle.getHtml());
-});
 ----
 
 `container` accepts either a CSS selector string or a resolved `HTMLElement`.

@@ -1,0 +1,442 @@
+= Editor API reference
+:description: Every prop, event, slot, method and type exported by @maildeno/editor.
+:keywords: maildeno editor api, EditorHandle, EmailEditor props, InitOptions
+
+[.lead]
+The complete public surface of `@maildeno/editor` v{editor-version}. For a guided introduction see xref:opensource:editor.adoc[`@maildeno/editor`]; this page is the lookup table.
+
+== Exports
+
+[source,typescript]
+----
+// @maildeno/editor
+import {
+  EmailEditor,                                   // Vue component
+  createLocalStorageAdapter,                     // the default adapter
+  markHandled, isHandled,                        // adapter error helpers
+  registerBlock, getBlock, getAllBlocks,         // block registry
+  registerESPSyntax, getRegisteredCustomESPs,    // ESP registry
+  registerMergeTags, getRegisteredMergeTagIds,   // merge-tag registry
+  setEditorTheme, palette,                       // theming
+} from "@maildeno/editor"
+
+// @maildeno/editor/init
+import { init } from "@maildeno/editor/init"
+
+// @maildeno/editor/element
+import {
+  registerMaildenoEditorElement,
+  MaildenoEditorElement,
+} from "@maildeno/editor/element"
+----
+
+=== Exported types
+
+[source,typescript]
+----
+import type {
+  // Adapter
+  EditorStorageAdapter, PartialStorageAdapter,
+  TemplateSnapshot, TemplateSummary, TemplateVersionSummary, SavedRow,
+  // Blocks
+  BlockDefinition, BlockRenderContext,
+  // ESP
+  ESPWrapperOverrides,
+  // Merge tags
+  MergeTagRegistration,
+  // Theming
+  ThemeOptions, ThemeTokens,
+  // Init
+  InitOptions, EditorHandle,
+  // Assistant
+  EditorWriteApi, AssistantMount,
+  // Document model
+  Canvas, NestedRow, RowSpacer, Column,
+  VisibilityConfig, BorderConfig, GradientConfig,
+  // State
+  AutoSaveStatus, ColorMode,
+} from "@maildeno/editor"
+----
+
+NOTE: `Canvas` here is the email body's own settings — width, padding, background, preheader — not an HTML `<canvas>`. Alias it on import if that reads badly in your codebase.
+
+== `EmailEditor` props
+
+For the Vue-component path. `init()` accepts the same options under slightly different names where noted.
+
+[.table-scroll, cols="1,2,1,3", options=header]
+|===
+|Prop|Type|Default|Description
+
+|`isReady`
+|`boolean`
+|`true`
+|Suppresses the loading overlay. Set `false` while your own data loads.
+
+|`storageAdapter`
+|`PartialStorageAdapter`
+|localStorage
+|Merged per-method with the defaults.
+
+|`templateId`
+|`string`
+|—
+|If given, loaded through the adapter on mount. Omit to start blank.
+
+|`theme`
+|`ThemeOptions`
+|package defaults
+|Reactive — assigning a new object re-themes live, no remount.
+
+|`colorMode`
+|`"auto" \| "light" \| "dark"`
+|`"auto"`
+|`auto` follows a `dark` class on `<html>` or `<body>`.
+
+|`onSave`
+|`(p: { templateId: string \| null }) => void`
+|—
+|**Presence reveals the Save button.**
+
+|`saveHandler`
+|same as `onSave`
+|—
+|Custom-element path only — see the note below.
+
+|`onSendTestEmail`
+|`(p: { to, subject, html }) => Promise<void> \| void`
+|—
+|Presence reveals the Send-test button.
+
+|`capabilities`
+|`{ export?, savedRows? }`
+|—
+|Restricts only, never grants.
+
+|`brandName`
+|`string`
+|package default
+|Empty string drops the attribution line entirely.
+
+|`versions`
+|`boolean`
+|`false`
+|Swaps the saved-templates panel for version history.
+
+|`assistant`
+|`AssistantMount`
+|—
+|Non-Vue hosts. Vue hosts use the `#assistant` slot.
+|===
+
+[CAUTION]
+====
+**Why `saveHandler` exists.** Vue's `defineCustomElement` treats props beginning with `on` as event listeners rather than props, so `el.onSave = fn` never reaches the component — the button appears and the callback never fires. On the custom-element path, set `saveHandler` instead. `init()` does this for you; Vue hosts should use `@save`.
+====
+
+=== `capabilities`
+
+[source,typescript]
+----
+interface Capabilities {
+  export?: Array<"html" | "mjml" | "react" | "json">
+  savedRows?: { create?: boolean; rename?: boolean; delete?: boolean }
+}
+----
+
+Omitting a key leaves that area fully enabled. This object can only take things away.
+
+The Shared tab of the saved-rows panel is read-only for everyone regardless, because no adapter method backs writing to it.
+
+== Events
+
+[cols="1,2,3", options=header]
+|===
+|Event|Payload|Fires
+
+|`save`
+|`{ templateId: string \| null }`
+|After a successful save. Only ever fires when `onSave` was provided.
+
+|`ready`
+|—
+|After the canvas has actually **painted**, not merely mounted. Once per mount.
+|===
+
+`save` is dispatched as a DOM `CustomEvent` with `bubbles: true` and `composed: true`, so it escapes the shadow root and reaches the host element — which is where `handle.on("save", …)` attaches.
+
+[TIP]
+====
+`ready` exists because "the component mounted" and "the user can look at it" are different moments. On mount the editor still has to resolve `loadTemplate`, hydrate the returned rows and paint them. A host that removes its loading placeholder on mount shows the canvas mid-hydration — blocks appearing one after another — which reads as the page breaking.
+====
+
+== Slots
+
+[cols="1,2,2", options=header]
+|===
+|Slot|Props|Purpose
+
+|default
+|`{ rows, canvas, autoSaveStatus, colorMode, … }`
+|Read editor state from the host.
+
+|`header-actions`
+|forwarded from the header
+|Add your own buttons to the editor header.
+
+|`assistant`
+|`{ editor: EditorWriteApi }`
+|Vue-native assistant panel.
+|===
+
+== Exposed methods
+
+Available on a Vue template ref, on the custom element instance, and through `EditorHandle`.
+
+[source,typescript]
+----
+getHtml(mode?: "prune" | "wrap"): string | null
+getMjml(mode?: "prune" | "wrap"): string | null
+getReactEmail(mode?: "prune" | "wrap"): string | null
+getJson(): Record<string, unknown> | null
+
+setJson(data: unknown, opts?: { history?: "undoable" | "reset" }): void
+getSelection(): { id: string; type: string | null } | null
+setSelection(id: string | null): boolean
+onChange(cb: () => void): () => void
+----
+
+[cols="1,3", options=header]
+|===
+|Method|Notes
+
+|`getHtml` / `getMjml` / `getReactEmail`
+|`"prune"` (default) evaluates conditionals against the current preview context. `"wrap"` keeps every branch and emits the ESP's syntax.
+
+|`getJson`
+|The portable document. This is what you store.
+
+|`setJson`
+|Accepts what `getJson()` returns, so `setJson(getJson())` round-trips — plus the `{ canvas, content: { rows } }` shape version APIs typically hand back.
+
+|`getSelection`
+|`type` is the block type, so you can branch on it without resolving the id against the tree yourself.
+
+|`setSelection`
+|Returns `false` if no node has that id. Does not touch history — selection is view state.
+
+|`onChange`
+|Keyed to **history commits**, not raw mutations. Typing in a text block is one call, not one per keystroke. Returns an unsubscribe function.
+|===
+
+`setJson`'s `history` option defaults to `"undoable"` — one Ctrl+Z-able step, right for anything the user triggered. Use `"reset"` when swapping which document is open, where undoing back into the previous document would be wrong.
+
+== `init(options)`
+
+[source,typescript]
+----
+function init(options: InitOptions): Promise<EditorHandle>
+----
+
+=== `InitOptions`
+
+[source,typescript]
+----
+interface InitOptions {
+  container: HTMLElement | string
+  templateId?: string
+  storageAdapter?: PartialStorageAdapter
+  theme?: ThemeOptions
+  capabilities?: { export?: Array<"html" | "mjml" | "react" | "json"> }
+  onSendTestEmail?: (p: { to: string; subject: string; html: string })
+    => Promise<void> | void
+  onSave?: (p: { templateId: string | null }) => void
+  brandName?: string
+  versions?: boolean
+  assistant?: AssistantMount
+  shadowDom?: boolean          // default true
+}
+----
+
+=== `EditorHandle`
+
+[source,typescript]
+----
+interface EditorHandle {
+  readonly element: HTMLElement
+
+  on(event: "save", handler: (p: { templateId: string | null }) => void): void
+  off(event: "save", handler: (p: { templateId: string | null }) => void): void
+
+  setTheme(theme: ThemeOptions): void
+
+  getHtml(mode?: "prune" | "wrap"): string | null
+  getMjml(mode?: "prune" | "wrap"): string | null
+  getReactEmail(mode?: "prune" | "wrap"): string | null
+  getJson(): Record<string, unknown> | null
+  setJson(data: unknown, opts?: { history?: "undoable" | "reset" }): void
+  getSelection(): { id: string; type: string | null } | null
+  setSelection(id: string | null): boolean
+  onChange(cb: () => void): () => void
+
+  destroy(): void
+}
+----
+
+`element` is the underlying `<maildeno-editor>` — a real DOM element, exposed for anything the handle does not wrap directly.
+
+NOTE: `handle.on("save", …)` only ever fires when `onSave` was passed to `init()`. Without it the editor has no Save button and never saves, so there is no event to hear. To observe saves without doing work in `onSave`, pass a no-op handler to enable saving and do the work in the listener.
+
+== `AssistantMount`
+
+[source,typescript]
+----
+interface AssistantMount {
+  mount(el: HTMLElement, editor: EditorWriteApi): void
+  unmount?(el: HTMLElement): void
+}
+
+interface EditorWriteApi {
+  getJson(): Record<string, unknown> | null
+  setJson(data: unknown, opts?: { history?: "undoable" | "reset" }): void
+  getSelection(): { id: string; type: string | null } | null
+  setSelection(id: string | null): boolean
+  onChange(cb: () => void): () => void
+}
+----
+
+`mount` is called on first open rather than at startup, and `unmount` on close, so a drawer the user never opens costs nothing.
+
+== Storage adapter
+
+[source,typescript]
+----
+interface EditorStorageAdapter {
+  // Templates
+  loadTemplate(templateId?: string): Promise<TemplateSnapshot | null>
+  saveTemplate(snapshot: TemplateSnapshot, templateId?: string):
+    Promise<{ templateId: string }>
+  listTemplates(): Promise<TemplateSummary[]>
+  deleteTemplate(templateId: string): Promise<void>
+
+  // Version history
+  listTemplateVersions(templateId: string): Promise<TemplateVersionSummary[]>
+  getTemplateVersion(templateId: string, versionId: string):
+    Promise<TemplateSnapshot | null>
+  deleteTemplateVersion(templateId: string, versionId: string): Promise<void>
+  deleteAllTemplateVersions(templateId: string): Promise<void>
+  setTemplateVersionKept(templateId: string, versionId: string, kept: boolean):
+    Promise<void>
+
+  // Saved rows
+  listSavedRows(): Promise<SavedRow[]>
+  listSystemSavedRows(): Promise<SavedRow[]>          // read-only shared library
+  saveSavedRow(row: Record<string, any>, name: string): Promise<SavedRow | null>
+  deleteSavedRow(id: string): Promise<void>
+  renameSavedRow(id: string, name: string): Promise<void>
+  cloneSavedRowForCanvas(id: string): Record<string, any> | null   // sync
+
+  // Images
+  uploadImage(file: File): Promise<string>
+}
+
+type PartialStorageAdapter = Partial<EditorStorageAdapter>
+----
+
+Every method is optional in `PartialStorageAdapter`. See xref:opensource:guide-storage-adapters.adoc[Storage adapters] for the design notes and a worked backend.
+
+=== Supporting types
+
+[source,typescript]
+----
+interface TemplateSnapshot {
+  rows: Record<string, any>[]
+  canvasStyles: Record<string, any>
+  name?: string
+  tags?: string[]
+  updatedAt?: string
+}
+
+interface TemplateSummary {
+  templateId: string
+  name?: string
+  updatedAt?: string
+}
+
+interface TemplateVersionSummary {
+  versionId: string
+  createdAt: string
+  label?: string      // human label; falls back to a relative timestamp
+  kept?: boolean      // pinned — survives deleteAllTemplateVersions
+  author?: string     // free-form attribution, rendered verbatim
+}
+
+interface SavedRow {
+  id: string
+  name: string
+  createdAt: string
+  row: Record<string, any>
+}
+----
+
+`TemplateSummary` and `TemplateVersionSummary` are summaries rather than full snapshots on purpose: rendering a list of fifty versions should not mean downloading fifty documents.
+
+== Adapter error helpers
+
+[source,typescript]
+----
+import { markHandled, isHandled } from "@maildeno/editor"
+
+async saveTemplate(snapshot, templateId) {
+  const res = await fetch(...)
+  if (res.status === 403) {
+    showMyOwnToast("You don't have permission to edit this template.")
+    throw markHandled(new Error("forbidden"))   // editor stays quiet
+  }
+  return res.json()
+}
+----
+
+Mark an error your adapter already reported and the editor skips its own generic toast rather than stacking a vaguer message on top of yours.
+
+== Registries
+
+[source,typescript]
+----
+// Blocks
+function registerBlock(definition: BlockDefinition): void
+function registerBlock(id: string, definition: BlockDefinition): void
+function getBlock(id: string): BlockDefinition | undefined
+function getAllBlocks(): ReadonlyMap<string, BlockDefinition>
+
+// ESP syntaxes
+function registerESPSyntax(
+  id: string,
+  meta: ESPSyntaxMeta,
+  overrides?: ESPWrapperOverrides,
+): void
+function getRegisteredCustomESPs(): Array<{ id: string; meta: ESPSyntaxMeta }>
+
+// Merge tags
+function registerMergeTags(tags: MergeTagRegistration[]): void
+function getRegisteredMergeTagIds(): string[]
+----
+
+IMPORTANT: All registries are module-level. Call them at import time, not inside a component — a block registered after mount will not appear in the sidebar.
+
+== Theming
+
+[source,typescript]
+----
+function setEditorTheme(theme: ThemeOptions): void
+const palette: /* the default token maps */
+----
+
+`ThemeOptions` carries roughly 70 colour tokens plus a `dark` variant map. See xref:opensource:editor-theming.adoc[Theming] for the full list.
+
+== Where to go next
+
+* xref:opensource:editor.adoc[`@maildeno/editor`] — the guided introduction
+* xref:opensource:editor-theming.adoc[Theming]
+* xref:opensource:editor-blocks.adoc[Custom blocks]
+* xref:opensource:guide-storage-adapters.adoc[Storage adapters]

@@ -29,6 +29,11 @@ npm install @maildeno/editor
     handle = await init({
       container,
       capabilities: { export: ["html", "mjml", "json"] },
+      onSave: (payload: { templateId: string | null }) => {
+        console.log("Saved", payload);
+        const target = handle?.getHtml(); // handle?.getReactEmail() or handle?.getMjml()
+        console.log(target);
+      },
       onSendTestEmail: async ({ to, subject, html }) => {
         await fetch("/api/send-test", {
           method: "POST",
@@ -37,16 +42,12 @@ npm install @maildeno/editor
         });
       },
     });
-
-    handle.on("save", ({ templateId }) => {
-      console.log("saved:", templateId);
-    });
   });
 
   onDestroy(() => handle?.destroy());
 </script>
 
-<div bind:this={container} style="height: 100vh" />
+<div bind:this={container}/>
 ----
 
 The dynamic `import()` inside `onMount` keeps `@maildeno/editor/init` — and its shadow-root/DOM usage — out of SvelteKit's server-side module graph. In a client-only Svelte app (no SvelteKit) a static top-level `import` works fine too, since nothing evaluates it until `onMount` calls `init()`.

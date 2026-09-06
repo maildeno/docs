@@ -1,20 +1,40 @@
 /* =========================================================
-   highlight-tokens.css  —  Syntax highlighting token colours
-   Palette: Catppuccin Mocha
-   Light-mode code bg : #1e1e2e  (--color-code-bg, Mocha Base)
-   Dark-mode code bg  : #0d1117  (--color-code-bg in dark theme)
-   Both use text      : #cdd6f4  (--color-code-text, Mocha Text)
+   highlight-tokens.css — Syntax highlighting token colours
+   ---------------------------------------------------------
+   Palette: Maildeno Sage (retuned from Catppuccin Mocha)
 
-   No hljs CSS theme is loaded — this file owns all token colours
-   so the result stays consistent with your existing code-block
-   background and never conflicts with site.css.
+   Light-mode code bg : #0f0f10  (--color-code-bg)
+   Dark-mode  code bg : #0a0a0b  (--color-code-bg, dark theme)
+   Both use text      : #dcdcde  (--color-code-text)
+
+   Both backgrounds are the neutral near-blacks used by dark
+   mode, so the site has one dark surface rather than two
+   that almost match.
+
+   No hljs CSS theme is loaded — this file owns every token
+   colour, so the result stays consistent with the code-block
+   background and never conflicts with site.css or brand.css.
+
+   ── Why these hues ──────────────────────────────────────
+   The previous palette leaned on mauve (#cba6f7) for
+   keywords, which was the single most violet element on the
+   page. Keywords now use a mint-sage that belongs to the
+   brand, and the remaining hues were re-picked to stay
+   distinguishable from it — strings move to olive, numbers
+   to sand, built-ins to teal — rather than all collapsing
+   into one green.
+
+   Every token below clears 4.5:1 against both code
+   backgrounds. Comments are the quietest at 4.67:1 / 4.87:1
+   and additionally carry an italic style, so they stay
+   identifiable without relying on colour alone.
    ========================================================= */
 
 /* ── Base ──────────────────────────────────────────────────
    display:block makes <code> fill the <pre> properly.
    background:transparent and color:inherit let the <pre>'s
    --color-code-bg and --color-code-text show through,
-   including the dark-mode override (#0d1117).
+   including the dark-mode override.
    ──────────────────────────────────────────────────────── */
 pre code.hljs {
   display: block;
@@ -24,89 +44,100 @@ pre code.hljs {
   padding: 0; /* <pre> in site.css already handles padding */
 }
 
-/* ── Comments — Overlay 0, italic ─────────────────────── */
+/* ── Comments — neutral grey, italic — 4.67:1 / 4.87:1 ─── */
 .hljs-comment,
-.hljs-quote { color: #6c7086; font-style: italic; }
+.hljs-quote { color: #7d7d80; font-style: italic; }
 
-/* ── Keywords — Mauve ──────────────────────────────────── */
-/* const, function, class, import, export, return, if, for,
+/* ── Keywords — mint sage ──────────────────────────────────
+   const, function, class, import, export, return, if, for,
    await, async, def, lambda, from, with, as, not, in, is,
    yield, pass, raise, try, except, finally, del, global    */
 .hljs-keyword,
 .hljs-selector-tag,
-.hljs-meta .hljs-keyword { color: #cba6f7; }
+.hljs-meta .hljs-keyword { color: #96c7aa; }
 
-/* ── Literals — true / false / null / None — Peach ─────── */
-.hljs-literal { color: #fab387; }
+/* ── Literals — true / false / null / None — sand ───────── */
+.hljs-literal { color: #e5b583; }
 
-/* ── Strings — Green ───────────────────────────────────── */
+/* ── Strings — olive ───────────────────────────────────────
+   Deliberately yellow-green rather than green, so a string
+   is never mistaken for a keyword at a glance.             */
 .hljs-string,
-.hljs-template-literal,
-.hljs-addition { color: #a6e3a1; }
+.hljs-template-literal { color: #c9d98d; }
 
-/* String interpolation body (${...}) — keep as Text */
-.hljs-subst { color: #cdd6f4; }
+/* String interpolation body (${...}) — back to plain text */
+.hljs-subst { color: #dcdcde; }
 
-/* ── Numbers & RegExps — Peach ─────────────────────────── */
+/* ── Numbers & regexps — sand ──────────────────────────── */
 .hljs-number,
-.hljs-regexp { color: #fab387; }
+.hljs-regexp { color: #e5b583; }
 
-/* ── Built-in globals & types — Sky ───────────────────── */
-/* console, Error, Math, Array, print, len, dict, list,
+/* ── Built-in globals & types — teal ──────────────────────
+   console, Error, Math, Array, print, len, dict, list,
    str, int, bool, Promise, TypeScript built-in types       */
 .hljs-built_in,
-.hljs-type { color: #89dceb; }
+.hljs-type { color: #8fc5c9; }
 
-/* ── Function names — Blue ─────────────────────────────── */
-/* Covers both function definitions and call-site detection */
+/* ── Function names — muted blue ───────────────────────────
+   Covers both definitions and call-site detection.         */
 .hljs-title,
 .hljs-title.function_,
-.hljs-title.function_.invoke__ { color: #89b4fa; }
+.hljs-title.function_.invoke__ { color: #9dbede; }
 
-/* ── Class names — Yellow ──────────────────────────────── */
+/* ── Class names — warm gold ───────────────────────────── */
 .hljs-title.class_,
-.hljs-class .hljs-title { color: #f9e2af; }
+.hljs-class .hljs-title { color: #e3cf95; }
 
-/* ── Parameters — Text (default, no extra colour) ──────── */
-.hljs-params { color: #cdd6f4; }
+/* ── Parameters — plain text ───────────────────────────── */
+.hljs-params { color: #dcdcde; }
 
-/* ── Attributes / properties / JSON keys — Blue ────────── */
+/* ── Attributes / properties / JSON keys — muted blue ──── */
 .hljs-attr,
 .hljs-attribute,
-.hljs-property { color: #89b4fa; }
+.hljs-property { color: #9dbede; }
 
-/* ── HTML / XML tags ───────────────────────────────────── */
-.hljs-tag { color: #cdd6f4; }           /* angle brackets */
-.hljs-tag .hljs-name  { color: #f38ba8; } /* tag name — Red */
-.hljs-tag .hljs-attr  { color: #89b4fa; } /* attribute name */
+/* ── HTML / XML tags ──────────────────────────────────────
+   Angle brackets stay neutral; the tag name carries colour,
+   which is what the eye actually scans for in markup.      */
+.hljs-tag { color: #dcdcde; }
+.hljs-tag .hljs-name { color: #de9c9c; }
 
-/* ── Decorators / meta (@decorator, #![...]) — Peach ───── */
-.hljs-meta { color: #fab387; }
-.hljs-meta .hljs-string { color: #a6e3a1; }
+/* ── Variables — plain text ─────────────────────────────── */
+.hljs-variable,
+.hljs-variable.language_,
+.hljs-template-variable { color: #dcdcde; }
 
-/* ── Operators — Sky ───────────────────────────────────── */
-.hljs-operator { color: #89dceb; }
+/* ── Symbols, bullets, links — sand ─────────────────────── */
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link { color: #e5b583; }
 
-/* ── Punctuation — Overlay 2 (subtle) ──────────────────── */
-.hljs-punctuation { color: #9399b2; }
+/* ── Meta — shebangs, preprocessor, decorators — sage ──── */
+.hljs-meta { color: #7fae92; }
 
-/* ── Symbols — Pink ────────────────────────────────────── */
-.hljs-symbol { color: #f5c2e7; }
+/* ── Section headings (Markdown, AsciiDoc) — gold, bold ── */
+.hljs-section { color: #e3cf95; font-weight: 600; }
 
-/* ── CSS selectors ─────────────────────────────────────── */
-.hljs-selector-class { color: #f9e2af; } /* .class  — Yellow */
-.hljs-selector-id    { color: #f38ba8; } /* #id     — Red    */
+/* ── Selectors (CSS) ────────────────────────────────────── */
+.hljs-selector-id     { color: #9dbede; }
+.hljs-selector-class  { color: #96c7aa; }
+.hljs-selector-attr,
+.hljs-selector-pseudo { color: #c3a0d6; }
 
-/* ── Shell / bash — variable names — Mauve ─────────────── */
-.hljs-variable.language_ { color: #cba6f7; }
+/* ── Diffs ────────────────────────────────────────────────
+   Addition reuses the string olive, deletion a muted rose —
+   distinguishable from each other in the common forms of
+   colour-vision deficiency, and both carry a leading +/-
+   character in the source regardless.                      */
+.hljs-addition { color: #c9d98d; }
+.hljs-deletion { color: #e08c8c; }
 
-/* ── Diff ──────────────────────────────────────────────── */
-.hljs-deletion { color: #f38ba8; } /* Red   */
-/* .hljs-addition already covered under Strings (Green)    */
-
-/* ── Markdown / AsciiDoc prose inside code blocks ──────── */
-.hljs-section  { color: #89b4fa; font-weight: 600; } /* headings */
-.hljs-bullet   { color: #cba6f7; }
-.hljs-link     { color: #89b4fa; text-decoration: underline; }
+/* ── Emphasis ───────────────────────────────────────────── */
 .hljs-emphasis { font-style: italic; }
-.hljs-strong   { font-weight: 600; }
+.hljs-strong   { font-weight: 700; }
+
+/* ── Punctuation & operators — slightly dimmed text ───────
+   Kept below the surrounding tokens so structure recedes
+   and identifiers stand out.                               */
+.hljs-punctuation,
+.hljs-operator { color: #b4b4b8; }

@@ -1,11 +1,11 @@
 = Maildeno Documentation
-:description: Official documentation for Maildeno — the visual email template builder with a powerful render API.
-:keywords: maildeno, email builder, template, SDK, render API
+:description: Official documentation for Maildeno — the email template layer for engineering teams. Visual editor, offline renderer, and a hosted render API.
+:keywords: maildeno, email builder, email template, render api, mjml, react email, sdk
 
 [.lead]
-Build beautiful, responsive email templates visually — then render them anywhere with a single API call.
+Design email templates in a visual editor, attach merge-tag and visibility logic, then export clean HTML, MJML, or React Email. Render on your own infrastructure and send with whatever ESP you already use.
 
-Maildeno gives product teams a drag-and-drop email editor and gives developers a clean SDK to inject that output into any application stack.
+Maildeno gives product teams a drag-and-drop editor and gives developers a template format they own — stored in their own database, rendered in their own process, with no vendor in the send path.
 
 == Where do you want to start?
 
@@ -16,86 +16,170 @@ Maildeno gives product teams a drag-and-drop email editor and gives developers a
     <p>New here? Get your first email rendered in under five minutes.</p>
     <a href="quickstart.html">Get started →</a>
   </div>
-   <div class="card">
-    <p class="card-title">🧩 Open Source</p>
+  <div class="card">
+    <p class="card-title">🧩 Open source</p>
     <p>Self-host the editor and renderer — MIT-licensed, zero backend required.</p>
     <a href="opensource/overview.html">Explore the open source tools →</a>
   </div>
   <div class="card">
-    <p class="card-title">✏️ Email Builder</p>
+    <p class="card-title">✏️ Email builder</p>
     <p>Learn the editor: templates, merge tags, visibility rules, and exporting.</p>
     <a href="builder/overview.html">Explore the builder →</a>
   </div>
   <div class="card">
-    <p class="card-title">🔌 SDK Reference</p>
-    <p>Integrate rendering into your app with the JavaScript, Python, or PHP SDK.</p>
+    <p class="card-title">🔌 SDK reference</p>
+    <p>Integrate rendering with the JavaScript, Python, or PHP SDK.</p>
     <a href="sdk/overview.html">Browse the SDK →</a>
   </div>
-
 </div>
 ++++
 
-== What is Maildeno?
+== Two ways to use Maildeno
 
-Maildeno is a two-part product:
+Both paths read and write the same template JSON, so choosing one does not lock out the other.
 
-* **Open Source Editor & Renderer** — Prefer not to use the hosted platform at all? `@maildeno/editor` and `@maildeno/renderer` are MIT-licensed packages that give you the same drag-and-drop editor and rendering engine, self-hosted, with zero Maildeno backend. See xref:opensource:overview.adoc[Open Source].
+[.table-scroll, cols="1,2,2", options=header]
+|===
+| |Open source [.pill]#MIT#|Maildeno Cloud
 
-* **Email Builder** — A visual drag-and-drop editor for designing responsive email templates. Teams can manage layouts, merge tags, visibility rules, and export targets all from the dashboard — no code required.
+|Editor
+|`@maildeno/editor` embedded in your own app
+|Dashboard at {dashboard-url}
 
-* **Render API & SDKs** — Fetch a template's JSON structure via our REST API. Then the SDK's local render engine — an embedded WebAssembly module for JavaScript/Python, a bundled native binary for PHP takes that JSON, merges your dynamic data, applies visibility rules, and compiles it locally into HTML, React Email, or MJML ready to pipe into any email-sending service. Your data stays completely local. Maildeno never sees it.
+|Rendering
+|`@maildeno/renderer` — fully offline
+|Render API + SDKs, cached and rendered in-process
 
+|Template storage
+|Your database, via a storage adapter (`localStorage` by default)
+|Cloud sync, team collaboration, version history
 
+|Images
+|Wherever you already host assets
+|Built-in image CDN
+
+|Account / API key
+|Not required
+|Required
+
+|Cost
+|Free — MIT
+|Free tier, then paid plans
+|===
+
+TIP: Not sure which? Start with xref:opensource:overview.adoc[open source]. It needs no account, and everything you build transfers if you later want cloud sync — it is a one-line adapter change, not a migration.
+
+== The shape of it
+
+[source,text]
+----
+  BROWSER — your app                    SERVER / EDGE — your send path
+
+  ┌────────────────────┐                ┌──────────────────────────────┐
+  │  @maildeno/editor  │                │  @maildeno/renderer          │
+  │                    │                │      — or a hosted SDK       │
+  │  drag · drop ·     │                │                              │
+  │  merge tags ·      │                │  render(template, {          │
+  │  visibility rules  │                │    mergeTags, context        │
+  └─────────┬──────────┘                │  })                          │
+            │ getJson()                 └──────────────┬───────────────┘
+            ▼                                          │
+  ┌────────────────────┐   read at send time           ▼
+  │  YOUR DATABASE     │ ────────────────────►  HTML / MJML / React Email
+  │  template JSON     │                                │
+  └────────────────────┘                                ▼
+                                          Resend · Postmark · SES · any ESP
+----
+
+The template JSON is the whole interface. Everything else is replaceable.
 
 == Key capabilities
 
-[cols="2,3",options=header]
+[.table-scroll, cols="2,3", options=header]
 |===
 |Capability|Description
 
 |Drag-and-drop editor
-|Build pixel-perfect emails without writing HTML or CSS.
+|Build responsive emails without writing HTML or CSS. Eleven built-in block types, plus your own.
 
 |Merge tags
-|Inject dynamic text, URLs, and HTML attributes at render time.
+|Inject dynamic text, URLs and attribute values at render time, each escaped correctly for where it lands.
 
 |Visibility rules
-|Show or hide sections based on context values like `plan` or `country`.
+|Show or hide sections on context values like `plan` or `country` — resolved by Maildeno, or emitted as your ESP's own syntax.
 
 |Multi-target export
-|Render the same template as HTML, React Email, or MJML.
+|One template → HTML, MJML, React Email, or portable JSON.
+
+|14 ESP syntaxes
+|Klaviyo, Mailchimp, Braze, SFMC, HubSpot, Iterable, SendGrid and more, plus custom registration.
+
+|Accessibility checking
+|A WCAG 2.1 AA-aligned rule catalogue built into the editor, with per-issue suppression.
+
+|Client preview
+|Thirteen email clients modelled, including four genuinely different dark-mode behaviours.
+
+|Edge rendering
+|The renderer runs in Cloudflare Workers, Vercel Edge, Deno and the browser — same import, same output.
+
+|Zero dependencies
+|`@maildeno/renderer` has no runtime dependencies and makes no network calls.
 
 |Scoped API keys
-|Restrict each key to specific render targets for least-privilege access.
-
-|Sync + async SDKs
-|Python SDK ships both `MaildenoClient` (sync) and `AsyncMaildenoClient` (asyncio).
+|Restrict each key to specific render targets for least-privilege access. _(Cloud)_
 
 |Three official SDKs
-|JavaScript/TypeScript, Python, and PHP — first-party SDKs with matching feature sets.
+|JavaScript/TypeScript, Python and PHP, with matching feature sets. _(Cloud)_
 |===
 
 == Supported render targets
 
-[cols="1,1,2",options=header]
+[.table-scroll, cols="1,1,3", options=header]
 |===
-|Target|SDK value (all SDKs)|Use case
+|Target|Value|Use case
 
 |HTML
 |`"html"`
-|Any transactional email service (SendGrid, Postmark, SES, etc.)
-
-|React Email
-|`"react-email"`
-|Next.js / React-based email pipelines
+|Any transactional or marketing email service — Resend, Postmark, SES, SendGrid, or your own MTA.
 
 |MJML
 |`"mjml"`
-|Teams already using MJML for cross-client compatibility
+|Teams with an existing MJML toolchain.
+
+|React Email
+|`"react-email"`
+|Next.js and other React-based email pipelines. Produces `.tsx` source.
+
+|JSON
+|—
+|The portable template document. This is what you store. _(Editor export only)_
+|===
+
+IMPORTANT: Store the JSON, not the HTML. HTML is a build artifact — you will want to regenerate it with a newer engine one day, and a stored HTML blob cannot be re-rendered for a different recipient.
+
+== Packages
+
+[.table-scroll, cols="1,2,1", options=header]
+|===
+|Package|What it does|Version
+
+|`@maildeno/editor`
+|The drag-and-drop editor as an embeddable component. React, Vue, Angular, Svelte, or plain HTML.
+|{editor-version}
+
+|`@maildeno/renderer`
+|Renders a template to HTML, MJML or React Email — offline, in any runtime.
+|{renderer-version}
+
+|`maildeno`
+|The hosted SDK — fetches templates by ID and renders them in-process.
+|{js-sdk-version}
 |===
 
 == Need help?
 
-* Browse the xref:builder:overview.adoc[Builder docs] or xref:sdk:overview.adoc[SDK Reference].
-* File a bug or feature request on https://github.com/maildeno/docs[GitHub].
-* Email the team at mailto:{support-email}[{support-email}].
+* xref:troubleshooting.adoc[Troubleshooting] — symptoms, causes and fixes
+* xref:glossary.adoc[Glossary] — terms defined once
+* File a bug or feature request: {editor-repo}/issues[editor] · {renderer-repo}/issues[renderer] · {docs-repo}/issues[docs]
+* Email the team at mailto:{support-email}[{support-email}]

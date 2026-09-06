@@ -1,0 +1,334 @@
+= Browsers and edge runtimes
+:description: Run @maildeno/renderer in Cloudflare Workers, Vercel Edge, Deno, or the browser — one install, one import, no bundler configuration.
+:keywords: cloudflare workers, vercel edge, deno, browser, wasm, edge rendering, workerd
+
+[.lead]
+The same `import { render } from "@maildeno/renderer"` works unchanged in Node, in a browser, in a Cloudflare Worker, in Vercel Edge, and in Deno. There is no separate edge package, no bundler plugin, and no `engine.wasm` asset to deploy alongside your code.
+
+== How the right build is selected
+
+Your bundler picks it through `package.json`'s https://nodejs.org/api/packages.html#conditional-exports[conditional exports]. Nothing to configure.
+
+[.table-scroll, cols="2,2,1", options=header]
+|===
+|Runtime|Export condition|Path as source?
+
+|Node {node-version}+
+|`node`
+|Yes
+
+|Cloudflare Workers
+|`workerd` — Wrangler sets this automatically
+|No
+
+|Vercel Edge Runtime
+|`edge-light`
+|No
+
+|Browsers, via a bundler
+|`browser`
+|No
+
+|Deno
+|`deno`
+|No
+
+|Anything else, or a fully neutral bundler
+|falls back to the browser/edge build
+|No
+|===
+
+Node gets a build that reads `engine.wasm` from disk. Everywhere else gets a build with the engine embedded as a base64 string.
+
+The neutral fallback is the **edge** build deliberately. It makes no assumptions about what is available, which is the conservative default — a Node-shaped fallback would break in exactly the environments that matter most.
+
+== The one behavioural difference
+
+[source,typescript]
+----
+// Node — both work
+await render("templates/welcome.json")
+await render(templateObject)
+
+// Browser / Workers / Vercel Edge / Deno — only this
+await render(templateObject)
+----
+
+There is no filesystem, so there is no path to read. Read the template however makes sense for your runtime and pass the parsed object in.
+
+Passing a string throws `RenderError` with code `TEMPLATE_NOT_FOUND` and a message telling you what to do instead:
+
+[source,text]
+----
+Cannot load a template from a path ("welcome.json") in this runtime:
+there is no file system here (this is the browser/edge build of
+@maildeno/renderer). Read the template yourself — e.g. fetch(), a
+KV/R2/Durable Object binding, or a bundler JSON import — and pass the
+parsed object to render() instead of a path.
+----
+
+[NOTE]
+====
+**Why it does not silently `fetch()` the string.** That would reintroduce a network dependency the package is explicit about not having, and it would be a surprising thing for a "path" argument to do. Graceful degradation is often the wrong choice for developer tooling — a clear failure beats a mysterious behaviour.
+====
+
+Every other option and every error code behaves identically to Node.
+
+== Where the template comes from
+
+Four patterns, in rough order of how common they are.
+
+=== A bundler JSON import
+
+Simplest, and right when the template ships with your code and changes on deploy.
+
+[source,typescript]
+----
+import template from "./templates/welcome.json"
+import { render } from "@maildeno/renderer"
+
+const html = await render(template, {
+  mergeTags: { text: { first_name: "Ada" } },
+})
+----
+
+The template is inlined into your bundle at build time. No runtime lookup, no latency, no failure mode.
+
+TIP: Under TypeScript this needs `"resolveJsonModule": true` in `tsconfig.json`.
+
+=== A Workers KV binding
+
+Right when templates change independently of deploys.
+
+[source,typescript]
+----
+const template = await env.TEMPLATES.get("welcome", "json")
+if (!template) return new Response("Unknown template", { status: 404 })
+
+const html = await render(template, { mergeTags: { text: { first_name } } })
+----
+
+KV's `"json"` type does the parse for you, so the object goes straight into `render()` — one fewer line and one fewer `try`/`catch`.
+
+=== R2 or a Durable Object
+
+[source,typescript]
+----
+// R2 — larger templates, or when you already store assets there
+const obj = await env.BUCKET.get("templates/welcome.json")
+const template = await obj?.json()
+
+// Durable Object — when a template is edited live and read-after-write matters
+const template = await stub.getTemplate("welcome")
+----
+
+=== `fetch()` from your own API
+
+[source,typescript]
+----
+const res = await fetch(`${env.API_BASE}/templates/welcome`, {
+  headers: { authorization: `Bearer ${env.API_TOKEN}` },
+})
+const template = await res.json()
+----
+
+The *renderer* still makes no network call. You are fetching the template; rendering stays local.
+
+== Cloudflare Workers
+
+[source,typescript]
+----
+import { render, RenderError } from "@maildeno/renderer"
+
+interface Env {
+  TEMPLATES: KVNamespace
+  RESEND_API_KEY: string
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const { email, firstName } = await request.json()
+
+    const template = await env.TEMPLATES.get("welcome", "json")
+    if (!template) return new Response("Template not found", { status: 404 })
+
+    let html: string
+    try {
+      html = await render(template, {
+        mergeTags: {
+          text: { first_name: firstName },
+          url:  { cta: "https://app.example.com/start" },
+        },
+        context: { plan: "free" },
+      })
+    } catch (err) {
+      if (err instanceof RenderError) {
+        console.error(err.code, err.message)
+        return new Response("Render failed", { status: 500 })
+      }
+      throw err
+    }
+
+    const send = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${env.RESEND_API_KEY}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "hello@example.com",
+        to: email,
+        subject: `Welcome, ${firstName}`,
+        html,
+      }),
+    })
+
+    return new Response(null, { status: send.ok ? 202 : 502 })
+  },
+}
+----
+
+Wrangler sets the `workerd` export condition automatically. There is nothing to add to `wrangler.jsonc` for the renderer itself.
+
+For a complete deployable project — secrets, three ESPs, and the deploy steps — see xref:opensource:guide-render-workers.adoc[Rendering on Cloudflare Workers].
+
+=== Bundle size
+
+Embedding the engine as base64 costs about 33% over the raw file, which works out to roughly **90 KB brotli-compressed** in your build.
+
+Worth comparing against Cloudflare's Worker size limits before assuming it is a problem. It rarely is the constraint.
+
+If it genuinely is, `@maildeno/renderer/core` lets you supply the instance yourself:
+
+[source,typescript]
+----
+import mod from "@maildeno/renderer/engine.wasm"   // Wrangler resolves this
+import { renderWithInstance } from "@maildeno/renderer/core"
+
+const instance = await WebAssembly.instantiate(mod, {})
+const html = await renderWithInstance(instance, template, {
+  mergeTags: { text: { first_name: "Ada" } },
+})
+----
+
+Wrangler uploads the `.wasm` as a separate module instead of inlining it, so it does not count against your JavaScript bundle in the same way.
+
+Validation, merge tags, context and minification behave exactly as in `render()`. There is no `baseDir` — same reason as the rest of the edge build.
+
+CAUTION: This is a niche optimisation. Reach for `render` first. The import shape follows Wrangler's own documented `.wasm`-import behaviour; smoke-test it in your deployment before relying on it, as you would with any bundler-specific import.
+
+== Vercel Edge
+
+Route handlers and middleware both work. The `edge-light` condition is selected automatically.
+
+[source,typescript]
+----
+// app/api/send/route.ts
+import { render } from "@maildeno/renderer"
+import template from "@/templates/welcome.json"
+
+export const runtime = "edge"
+
+export async function POST(request: Request) {
+  const { email, firstName } = await request.json()
+
+  const html = await render(template, {
+    mergeTags: { text: { first_name: firstName } },
+  })
+
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "hello@example.com",
+      to: email,
+      subject: "Welcome",
+      html,
+    }),
+  })
+
+  return Response.json({ ok: true })
+}
+----
+
+NOTE: A Next.js route without `export const runtime = "edge"` runs on Node and resolves the Node build instead, which also accepts a path. Both work; just be aware which one you are on when a path unexpectedly does or does not resolve.
+
+== Deno
+
+[source,typescript]
+----
+import { render } from "npm:@maildeno/renderer"
+
+const template = JSON.parse(await Deno.readTextFile("./welcome.json"))
+const html = await render(template, {
+  mergeTags: { text: { first_name: "Ada" } },
+})
+----
+
+Deno resolves the `deno` condition, which points at the edge build — so read the file yourself with `Deno.readTextFile` and pass the parsed object.
+
+== Browsers
+
+Useful for a live preview next to an editor, or a client-side test-send tool.
+
+[source,typescript]
+----
+import { render } from "@maildeno/renderer"
+
+const res = await fetch("/api/templates/welcome")
+const template = await res.json()
+
+const html = await render(template, {
+  mergeTags: { text: { first_name: nameInput.value } },
+  context: { plan: planSelect.value },
+})
+
+previewFrame.srcdoc = html
+----
+
+The engine instantiates once per page and is cached, so re-rendering on every keystroke is cheap enough for a live preview.
+
+WARNING: Rendering in the browser means the *template* reaches the browser. That is fine for a preview of a template the user is already editing. It is not a way to keep a template private from the person viewing the page.
+
+== Performance notes
+
+**The engine is a lazily-loaded singleton.** It is instantiated on the first `render()` call and reused for every subsequent one. In a Worker, that means the first request in an isolate pays the instantiation cost and the rest do not.
+
+**Rendering per recipient in a loop is fine.** It is a Wasm function call over a few kilobytes of JSON — no rate limits, no timeouts, nothing to mock in tests. If you are batching to avoid render cost, you are optimising the wrong thing.
+
+**Heap is capped and monitored.** The engine warns when a render approaches its ceiling. Typical templates use a fraction of it, with a wide margin over the worst case measured.
+
+== Troubleshooting
+
+[.table-scroll, cols="2,3", options=header]
+|===
+|Symptom|Cause and fix
+
+|`TEMPLATE_NOT_FOUND` with a message about no filesystem
+|You passed a path in an edge runtime. Read the template yourself and pass the object.
+
+|`fs is not defined` or a `node:` import error at build time
+|Your bundler resolved the Node build. Check that it honours export conditions, and that you have not aliased the package manually.
+
+|Worker bundle over the size limit
+|Try `@maildeno/renderer/core` with Wrangler's native `.wasm` import, which uploads the engine as a separate module.
+
+|`RENDER_ERROR` mentioning instantiation
+|The runtime does not expose `WebAssembly`, or blocks compilation. Every supported runtime does; check for a restrictive CSP if this is a browser.
+
+|Works locally, fails on deploy
+|Local dev may run the Node build while production runs the edge build. Test with `wrangler dev` or `vercel dev` rather than a plain Node server.
+
+|`INVALID_TEMPLATE` only in production
+|The template your binding returns differs from your local file. Log `template.schema_version` and `Object.keys(template)`.
+|===
+
+== Where to go next
+
+* xref:opensource:guide-render-workers.adoc[Rendering on Cloudflare Workers] — a complete deployable example
+* xref:opensource:renderer.adoc[`@maildeno/renderer`] — the full API reference
+* xref:opensource:guide-render-serverless.adoc[Serverless] — Lambda and other Node-based serverless
+* xref:opensource:template-schema.adoc[Template schema]

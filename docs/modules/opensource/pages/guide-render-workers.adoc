@@ -1,0 +1,389 @@
+= Rendering on Cloudflare Workers
+:description: A complete, deployable Cloudflare Worker that renders a Maildeno template at the edge and sends it through Resend, Postmark, or Amazon SES.
+:keywords: cloudflare workers, wrangler, kv, resend, postmark, aws ses, aws4fetch, edge email
+
+[.lead]
+A complete Worker: it accepts a POST with a recipient's address and first name, renders a template from KV at the edge, and sends it. No API key for Maildeno, no network call for rendering, nothing to deploy beside the Worker itself.
+
+== What you will build
+
+[source,text]
+----
+POST /  { "email": "…", "firstName": "…" }
+   │
+   ├─ read template JSON from a KV binding
+   ├─ render() — local Wasm, no network
+   └─ POST to your ESP
+          │
+          └─ 202 Accepted
+----
+
+== Prerequisites
+
+* A Cloudflare account and `wrangler` installed
+* An ESP account with a **verified sending domain** — every provider requires this
+* A template exported from the editor as JSON
+
+== 1. Create the project
+
+[source,bash]
+----
+npm create cloudflare@latest maildeno-worker -- --type=hello-world
+cd maildeno-worker
+npm install @maildeno/renderer
+----
+
+Then whichever your ESP needs:
+
+[source,bash]
+----
+npm install resend      # resend.ts only
+npm install aws4fetch    # aws-ses.ts only
+# Postmark needs nothing beyond @maildeno/renderer
+----
+
+== 2. Configure the KV binding
+
+[source,bash]
+----
+wrangler kv namespace create TEMPLATES
+----
+
+Add the returned id to `wrangler.jsonc`:
+
+[source,jsonc]
+----
+{
+  "name": "maildeno-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-01-01",
+  "kv_namespaces": [
+    { "binding": "TEMPLATES", "id": "<the id wrangler printed>" }
+  ]
+}
+----
+
+NOTE: Nothing needs adding for `@maildeno/renderer` itself. Wrangler sets the `workerd` export condition automatically, and the engine is embedded in the bundle.
+
+== 3. Upload the template
+
+[source,bash]
+----
+wrangler kv key put --binding=TEMPLATES welcome --path=./templates/welcome.json
+----
+
+TIP: Store templates in KV rather than bundling them when non-engineers change them. Bundle them when they change on the same cadence as your code — a JSON import is simpler and has no runtime failure mode.
+
+== 4. Set secrets
+
+`wrangler secret put` stores these encrypted and separate from `wrangler.jsonc`, so they are never committed:
+
+[source,bash]
+----
+wrangler secret put RESEND_API_KEY            # resend
+wrangler secret put POSTMARK_SERVER_TOKEN      # postmark
+wrangler secret put AWS_ACCESS_KEY_ID          # ses
+wrangler secret put AWS_SECRET_ACCESS_KEY      # ses
+----
+
+== 5. The Worker
+
+=== Resend
+
+Resend's SDK is fetch-based and works in Workers directly.
+
+[source,typescript]
+----
+// src/index.ts
+import { render, RenderError } from "@maildeno/renderer"
+import { Resend } from "resend"
+
+interface Env {
+  TEMPLATES: KVNamespace
+  RESEND_API_KEY: string
+}
+
+interface Body { email: string; firstName: string; plan?: string }
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    if (request.method !== "POST") {
+      return new Response("Method not allowed", { status: 405 })
+    }
+
+    let body: Body
+    try {
+      body = await request.json()
+    } catch {
+      return Response.json({ error: "Invalid JSON" }, { status: 400 })
+    }
+
+    if (!body.email || !body.firstName) {
+      return Response.json(
+        { error: "email and firstName are required" },
+        { status: 400 },
+      )
+    }
+
+    // KV's "json" type parses for us, so this goes straight into render().
+    const template = await env.TEMPLATES.get("welcome", "json")
+    if (!template) {
+      return Response.json({ error: "Template not found" }, { status: 404 })
+    }
+
+    let html: string
+    try {
+      html = await render(template, {
+        mergeTags: {
+          text: { first_name: body.firstName },
+          url:  { cta: "https://app.example.com/start" },
+        },
+        context: { plan: body.plan ?? "free" },
+      })
+    } catch (err) {
+      if (err instanceof RenderError) {
+        // The code distinguishes a bad template from a broken engine —
+        // one is your data, the other is an incident.
+        console.error("render failed", err.code, err.message)
+        return Response.json({ error: err.code }, { status: 500 })
+      }
+      throw err
+    }
+
+    const resend = new Resend(env.RESEND_API_KEY)
+    const { error } = await resend.emails.send({
+      from: "hello@example.com",           // must be a verified domain
+      to: body.email,
+      subject: `Welcome, ${body.firstName}`,
+      html,
+    })
+
+    if (error) {
+      console.error("send failed", error)
+      return Response.json({ error: "Send failed" }, { status: 502 })
+    }
+
+    return new Response(null, { status: 202 })
+  },
+}
+----
+
+=== Postmark
+
+Postmark's official SDK is built around Node's `https` module, which is not available at the edge. Its REST API is a single plain POST, so call it with `fetch()` directly.
+
+[source,typescript]
+----
+import { render } from "@maildeno/renderer"
+
+interface Env {
+  TEMPLATES: KVNamespace
+  POSTMARK_SERVER_TOKEN: string
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const { email, firstName } = await request.json<{
+      email: string; firstName: string
+    }>()
+
+    const template = await env.TEMPLATES.get("welcome", "json")
+    if (!template) return new Response("Template not found", { status: 404 })
+
+    const html = await render(template, {
+      mergeTags: { text: { first_name: firstName } },
+    })
+
+    const res = await fetch("https://api.postmarkapp.com/email", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        "X-Postmark-Server-Token": env.POSTMARK_SERVER_TOKEN,
+      },
+      body: JSON.stringify({
+        From: "hello@example.com",
+        To: email,
+        Subject: `Welcome, ${firstName}`,
+        HtmlBody: html,
+        MessageStream: "outbound",
+      }),
+    })
+
+    return new Response(null, { status: res.ok ? 202 : 502 })
+  },
+}
+----
+
+=== Amazon SES
+
+AWS SDK v3 has documented problems in restricted runtimes — it reaches for `DOMParser`, among other assumptions. Use https://github.com/mhart/aws4fetch[`aws4fetch`], a small fetch plus Web Crypto request signer that Cloudflare's own documentation recommends for this situation.
+
+[source,typescript]
+----
+import { render } from "@maildeno/renderer"
+import { AwsClient } from "aws4fetch"
+
+interface Env {
+  TEMPLATES: KVNamespace
+  AWS_ACCESS_KEY_ID: string
+  AWS_SECRET_ACCESS_KEY: string
+}
+
+const REGION = "us-east-1"
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const { email, firstName } = await request.json<{
+      email: string; firstName: string
+    }>()
+
+    const template = await env.TEMPLATES.get("welcome", "json")
+    if (!template) return new Response("Template not found", { status: 404 })
+
+    const html = await render(template, {
+      mergeTags: { text: { first_name: firstName } },
+    })
+
+    const aws = new AwsClient({
+      accessKeyId: env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+      service: "ses",
+      region: REGION,
+    })
+
+    const res = await aws.fetch(
+      `https://email.${REGION}.amazonaws.com/v2/email/outbound-emails`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          FromEmailAddress: "hello@example.com",
+          Destination: { ToAddresses: [email] },
+          Content: {
+            Simple: {
+              Subject: { Data: `Welcome, ${firstName}` },
+              Body: { Html: { Data: html } },
+            },
+          },
+        }),
+      },
+    )
+
+    return new Response(null, { status: res.ok ? 202 : 502 })
+  },
+}
+----
+
+== 6. Deploy and test
+
+[source,bash]
+----
+npx wrangler deploy
+----
+
+[source,bash]
+----
+curl -X POST https://maildeno-worker.<subdomain>.workers.dev \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","firstName":"Ada"}'
+----
+
+Local development:
+
+[source,bash]
+----
+npx wrangler dev
+----
+
+IMPORTANT: Use `wrangler dev`, not a plain Node server. `wrangler dev` runs the real `workerd` runtime and therefore the real edge build. A Node dev server resolves the Node build, which accepts a path — so a bug where you pass a path instead of an object will not appear until deploy.
+
+== Production considerations
+
+=== Cache the template
+
+Every request currently reads from KV. KV reads are fast and cached at the edge, but you can skip them entirely for a hot template by caching the parsed object in module scope:
+
+[source,typescript]
+----
+let cached: unknown | null = null
+
+async function getTemplate(env: Env) {
+  if (cached) return cached
+  cached = await env.TEMPLATES.get("welcome", "json")
+  return cached
+}
+----
+
+Module scope persists for the life of the isolate, so this amortises across many requests. It also means a template update takes effect when isolates recycle rather than immediately — fine for most cases, wrong if you need read-after-write. Add a version suffix to the KV key if you need a deterministic cutover.
+
+=== Authenticate the endpoint
+
+The Worker above will send email to any address anyone POSTs. At minimum:
+
+[source,typescript]
+----
+if (request.headers.get("authorization") !== `Bearer ${env.INTERNAL_TOKEN}`) {
+  return new Response("Unauthorized", { status: 401 })
+}
+----
+
+=== Do the send after the response
+
+If the caller does not need to know whether delivery succeeded, `waitUntil` returns sooner and keeps the send alive:
+
+[source,typescript]
+----
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    // … render …
+    ctx.waitUntil(sendEmail(html, email, env))
+    return new Response(null, { status: 202 })
+  },
+}
+----
+
+Weigh that against losing the ability to report a send failure to the caller.
+
+=== Queue high volume
+
+For a batch send, put recipients on a Cloudflare Queue and render per message in the consumer. Rendering is cheap; the ESP's rate limit is what you are pacing against.
+
+[source,typescript]
+----
+export default {
+  async queue(batch: MessageBatch<Recipient>, env: Env) {
+    const template = await getTemplate(env)
+    for (const msg of batch.messages) {
+      const html = await render(template, {
+        mergeTags: { text: { first_name: msg.body.firstName } },
+        context: { plan: msg.body.plan },
+      })
+      await send(html, msg.body.email, env)
+      msg.ack()
+    }
+  },
+}
+----
+
+=== Log the error code, not the whole error
+
+`RenderError.code` is the machine-readable part. `TEMPLATE_NOT_FOUND` and `INVALID_TEMPLATE` mean your data is wrong; `RENDER_ERROR` means the engine failed. The first two are a 4xx to whoever supplied the template; the third is an incident.
+
+== Bundle size
+
+The edge build embeds the engine as base64, roughly **90 KB brotli-compressed**. Check it:
+
+[source,bash]
+----
+npx wrangler deploy --dry-run --outdir=dist
+----
+
+If you are near the limit, `@maildeno/renderer/core` with Wrangler's native `.wasm` import uploads the engine as a separate module — see xref:opensource:renderer-edge.adoc#_bundle_size[Bundle size].
+
+== Where to go next
+
+* xref:opensource:renderer-edge.adoc[Browsers and edge runtimes] — Vercel Edge, Deno, and the browser
+* xref:opensource:renderer.adoc[`@maildeno/renderer`] — the full API reference
+* xref:opensource:guide-render-serverless.adoc[Serverless] — Lambda and other Node-based serverless
+* xref:opensource:template-schema.adoc[Template schema]

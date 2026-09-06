@@ -6,7 +6,7 @@ xref:opensource:guide-test-email.adoc[Test email integration] covers sending the
 
 The example below uses Express. The concepts on this page — `mergeTags`/`context`, `baseDir` as a security boundary, and the render-then-send pattern — apply the same way regardless of framework; if you're on one of these instead, jump straight there:
 
-[cols="1,3", options=header]
+[cols="1,1", options=header]
 |===
 |Framework|Guide
 

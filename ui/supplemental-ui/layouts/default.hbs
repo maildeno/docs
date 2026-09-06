@@ -5,7 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{#if page.title}}{{page.title}} :: {{/if}}{{site.title}}</title>
   {{#if page.attributes.description}}<meta name="description" content="{{page.attributes.description}}">{{/if}}
+  {{#if page.attributes.keywords}}<meta name="keywords" content="{{page.attributes.keywords}}">{{/if}}
+  <link rel="canonical" href="{{{site.url}}}{{{page.url}}}">
+  <!-- Social cards -->
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="{{site.title}}">
+  <meta property="og:title" content="{{#if page.title}}{{page.title}}{{else}}{{site.title}}{{/if}}">
+  {{#if page.attributes.description}}<meta property="og:description" content="{{page.attributes.description}}">{{/if}}
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="{{#if page.title}}{{page.title}}{{else}}{{site.title}}{{/if}}">
+  {{#if page.attributes.description}}<meta name="twitter:description" content="{{page.attributes.description}}">{{/if}}
+  <link rel="icon" type="image/png" sizes="64x64" href="{{{uiRootPath}}}/img/favicon-64.png">
   <link rel="icon" type="image/png" href="{{{uiRootPath}}}/img/favicon.png">
+  <link rel="apple-touch-icon" href="{{{uiRootPath}}}/img/favicon.png">
+  <!-- Brand colour for mobile browser chrome. Two entries so the bar
+       follows the user's system theme rather than fighting it. -->
+  <meta name="theme-color" content="#3f5e4a" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f0f10" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
   <!-- Theme: apply before first paint to prevent flash -->
   <script>
     (function(){
@@ -17,6 +34,15 @@
   <link rel="preconnect" href="https://api.fontshare.com">
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{{uiRootPath}}}/css/site.css">
+  <!-- Vendored from @asciidoctor/tabs. Loaded before brand.css so the sage
+       overrides in brand.css win on source order. -->
+  <link rel="stylesheet" href="{{{uiRootPath}}}/css/tabs.css">
+  <!-- brand.css overrides the UI bundle's design tokens with the Maildeno
+       sage palette. Loaded after site.css deliberately: the two declare the
+       same custom properties at the same specificity, so source order is
+       what decides. Keeping the brand in its own file means the UI bundle
+       can be regenerated without losing it. -->
+  <link rel="stylesheet" href="{{{uiRootPath}}}/css/brand.css">
   <link rel="stylesheet" href="{{{uiRootPath}}}/css/highlight-tokens.css">
 </head>
 <body>
@@ -33,7 +59,14 @@
           </svg>
         </button>
         <a href="{{siteRootPath}}" class="topnav__logo">
-          <img src="{{{uiRootPath}}}/img/logo.svg" alt="Maildeno Logo" style="width: 115px;">
+          <!-- Two files rather than one: the light logo's wordmark is dark sage
+               and is nearly invisible on the dark background. A <picture> with
+               prefers-color-scheme would not work here, because the theme is
+               driven by a class the user can toggle, not by the OS setting. -->
+          <img class="logo logo--light" src="{{{uiRootPath}}}/img/logo.svg"
+               alt="Maildeno" width="115" height="22">
+          <img class="logo logo--dark" src="{{{uiRootPath}}}/img/logo-dark.svg"
+               alt="Maildeno" width="115" height="22" aria-hidden="true">
         </a>
       </div>
       <nav class="topnav__links" aria-label="Site links">
@@ -151,10 +184,16 @@
   </div><!-- /.layout -->
 
   <script src="{{{uiRootPath}}}/js/site.js"></script>
+  <!-- Activates [tabs] blocks. Without it the tablist renders but never
+       responds to clicks, and every panel stays visible at once. -->
+  <script src="{{{uiRootPath}}}/js/tabs.js"></script>
+  <!-- Wraps tables in a scroll container. Optional: without it the tables
+       still render correctly, they just don't scroll on narrow screens. -->
+  <script src="{{{uiRootPath}}}/js/docs-enhance.js"></script>
   <!-- Syntax highlighting ─────────────────────────────────────────────────
        highlight.min.js (all languages, incl. TypeScript) loaded from cdnjs.
        No hljs CSS theme — token colours live in css/highlight-tokens.css,
-       matched to your Catppuccin Mocha palette.
+       matched to the Maildeno sage palette.
   ──────────────────────────────────────────────────────────────────────── -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
   <script>hljs.highlightAll();</script>

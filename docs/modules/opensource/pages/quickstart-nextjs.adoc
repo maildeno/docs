@@ -36,6 +36,11 @@ export default function EmailEditor({ templateId }: { templateId?: string }) {
       container: container.current!,
       templateId,
       capabilities: { export: ["html", "json"] },
+      onSave: (payload: { templateId: string | null }) => {
+        console.log("Saved", payload);
+        const target = handle?.getHtml(); // handle?.getReactEmail() or handle?.getMjml()
+        console.log(target);
+      },
       onSendTestEmail: async ({ to, subject, html }) => {
         const res = await fetch("/api/send-test", {
           method: "POST",
@@ -44,10 +49,7 @@ export default function EmailEditor({ templateId }: { templateId?: string }) {
         });
         if (!res.ok) throw new Error("Failed to send test email");
       },
-    }).then((h) => {
-      if (cancelled) return h.destroy();
-      handle.current = h;
-    });
+    })
 
     return () => {
       cancelled = true;
@@ -55,7 +57,7 @@ export default function EmailEditor({ templateId }: { templateId?: string }) {
     };
   }, [templateId]);
 
-  return <div ref={container} style={{ height: "100vh" }} />;
+  return <div ref={container} />;
 }
 ----
 

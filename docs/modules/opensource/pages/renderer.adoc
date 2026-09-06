@@ -1,10 +1,47 @@
 = @maildeno/renderer
-:description: Render Maildeno templates to HTML, MJML, or React Email entirely offline — no API key, no network call.
+:description: Render Maildeno templates to HTML, MJML, or React Email entirely offline — in Node, browsers, Cloudflare Workers, Vercel Edge, and Deno. No API key, no network call.
+:keywords: maildeno renderer, offline email rendering, wasm, cloudflare workers, vercel edge, mjml, react email
 
 [.lead]
-`@maildeno/renderer` renders a template JSON file to HTML, MJML, or React Email — locally, through an embedded WebAssembly engine. No API calls, no API key, no network access. Output is byte-identical to Maildeno's hosted renderer, because it's the same engine.
+`@maildeno/renderer` turns a template JSON document into HTML, MJML, or React Email — locally, through an embedded WebAssembly engine. No API calls, no API key, no network access. The same import works unchanged in Node, in a browser, in a Cloudflare Worker, in Vercel Edge, and in Deno, and the output is byte-identical everywhere because it is the same compiled engine everywhere.
 
-NOTE: This is the open-source, offline renderer. If you're looking for the client that talks to Maildeno's *hosted* Render API, see xref:sdk:javascript.adoc[the JavaScript/TypeScript SDK] instead — xref:opensource:overview.adoc[Open Source] explains how the two relate.
+[.pill]#MIT# [.pill-muted]#v{renderer-version}# [.pill-muted]#Zero dependencies#
+
+NOTE: This is the open-source, offline renderer. If you are looking for the client that talks to Maildeno's *hosted* Render API, see xref:sdk:javascript.adoc[the JavaScript/TypeScript SDK] instead. xref:opensource:overview.adoc[Open Source] explains how the two relate and how to combine them.
+
+== At a glance
+
+[.table-scroll, cols="1,3", options=header]
+|===
+|Property|Value
+
+|Package
+|`@maildeno/renderer`
+
+|License
+|MIT
+
+|Runtime dependencies
+|None. Not "few" — zero. Nothing transitive to audit.
+
+|Network calls
+|None, ever. There is no code path that opens a socket.
+
+|Engine
+|Rust compiled to WebAssembly, embedded in the package
+
+|Node requirement
+|Node {node-version}+
+
+|Other runtimes
+|Browsers, Cloudflare Workers, Vercel Edge, Deno
+
+|Output formats
+|HTML, MJML, React Email (`.tsx` source)
+
+|Bundle size
+|~9 KB in Node · ~90 KB brotli at the edge (Wasm inlined)
+|===
 
 == Installation
 
@@ -13,9 +50,9 @@ NOTE: This is the open-source, offline renderer. If you're looking for the clien
 npm install @maildeno/renderer
 ----
 
-Requires Node.js 18+.
+That is the entire install for every runtime. There is no separate edge package, no bundler plugin, and no `engine.wasm` asset to deploy alongside your code — see <<runtimes>> for how the right build is selected.
 
-== Quick example
+== Your first render
 
 [source,typescript]
 ----
@@ -27,19 +64,49 @@ const html = await render("templates/welcome.json", {
 })
 ----
 
-A path in, a rendered string out — that's the whole API for the common case.
+A path in, a string out. That is the whole API for the common case.
 
-== Getting a template JSON file
+In a browser or an edge runtime there is no filesystem, so you pass an already-parsed template object instead of a path. Everything else is identical — see <<runtimes>>.
 
-Any of these produce the same format:
+== Getting a template
 
-* Export from the open-source xref:opensource:editor.adoc[`@maildeno/editor`] — **Export → JSON**. No conversion needed; the export format is exactly what the renderer consumes.
-* Export from the hosted dashboard's xref:builder:exporting.adoc[Exporting] panel.
-* Fetch it yourself via `GET /v1/sdk/template/{id}` on the xref:sdk:rest-api.adoc[REST API] and save it to disk.
+Every one of these produces the same format, and the renderer does not care which you used:
+
+[cols="1,3", options=header]
+|===
+|Source|How
+
+|Open-source editor
+|xref:opensource:editor.adoc[`@maildeno/editor`] → **Export → JSON**. No conversion step — the editor's export format is exactly what the renderer consumes.
+
+|Hosted dashboard
+|xref:builder:exporting.adoc[Exporting] panel → **JSON**.
+
+|REST API
+|`GET /v1/sdk/template/{id}` on the xref:sdk:rest-api.adoc[REST API], saved to disk or held in memory.
+
+|Your own code
+|Generate the document programmatically. See xref:opensource:template-schema.adoc[Template schema] for the contract.
+|===
 
 Name the file whatever suits you — `welcome.json`, or the template's UUID.
 
-== API reference
+A template is a plain JSON object with five top-level keys:
+
+[source,json]
+----
+{
+  "template_id": "welcome_to_premium",
+  "template_name": "Welcome to Premium",
+  "canvas": { "backgroundColor": "#ffffff", "width": 600 },
+  "rows": [],
+  "schema_version": "1.0"
+}
+----
+
+TIP: Templates are data. Store the JSON in your database and re-render it whenever you need output, rather than storing the rendered HTML. HTML is a build artifact — you will want to regenerate it with a newer engine one day.
+
+== The five render functions
 
 [.table-scroll, cols="2,3,2", options=header]
 |===
@@ -47,77 +114,438 @@ Name the file whatever suits you — `welcome.json`, or the template's UUID.
 
 |`render(source, options?)`
 |`(TemplateSource, RenderOptions) => Promise<string>`
-|Rendered output for `options.target` (default `"html"`)
+|Output for `options.target` — HTML by default
+
+|`renderHtml(source, options?)`
+|`(TemplateSource, Omit<RenderOptions, "target">) => Promise<string>`
+|HTML string
+
+|`renderMjml(source, options?)`
+|`(TemplateSource, Omit<RenderOptions, "target">) => Promise<string>`
+|MJML source
+
+|`renderReactEmail(source, options?)`
+|`(TemplateSource, Omit<RenderOptions, "target">) => Promise<string>`
+|React Email `.tsx` source
 
 |`renderToResult(source, options?)`
 |`(TemplateSource, RenderOptions) => Promise<RenderResult>`
 |`{ output, templateId, templateName, target }`
-
-|`renderHtml(source, options?)`
-|Same as `render`, pinned to `target: "html"`
-|HTML string
-
-|`renderMjml(source, options?)`
-|Same as `render`, pinned to `target: "mjml"`
-|MJML source string
-
-|`renderReactEmail(source, options?)`
-|Same as `render`, pinned to `target: "react-email"`
-|React Email TSX string
 |===
 
-`source` is either a path to a `.json` template file, or an already-parsed template object.
+The three target-specific helpers are `render` with the target fixed. Their options type omits `target`, so the type system rejects `renderHtml(path, { target: "mjml" })` rather than silently ignoring it.
 
-=== RenderOptions
+`render` returns the string rather than a result object so it composes straight into a template literal or an ESP call with nothing to unwrap. Reach for `renderToResult` when you also want the template's identity:
 
-[.table-scroll, cols="1,2,3", options=header]
+[source,typescript]
+----
+import { renderToResult } from "@maildeno/renderer"
+
+const { output, templateId, templateName, target } =
+  await renderToResult("welcome.json", { target: "mjml" })
+
+console.log(`Rendered "${templateName}" (${templateId}) as ${target}`)
+----
+
+=== TemplateSource
+
+Every function accepts either form:
+
+[source,typescript]
+----
+type TemplateSource = string | Template
+----
+
+[source,typescript]
+----
+// A path — read and parsed for you. Node only.
+await render("templates/welcome.json")
+
+// An already-parsed template — no file I/O at all.
+const template = await db.templates.findById(id)
+await render(template)
+----
+
+The object form is what you want when templates live in a database, are generated in memory, or are imported by a bundler. It is also the *only* form available in browsers and edge runtimes.
+
+Both forms are validated identically. Skipping validation for in-memory templates would make failures depend on how the template arrived rather than on whether it is correct.
+
+== Options
+
+[.table-scroll, cols="1,2,1,3", options=header]
 |===
-|Option|Type|Description
+|Option|Type|Default|Description
 
 |`target`
 |`"html" \| "mjml" \| "react-email"`
-|Output format. Default `"html"`.
+|`"html"`
+|Output format.
 
 |`mergeTags`
 |`{ text?, url?, attr? }`
-|Same grouping as the hosted SDKs — each group is escaped appropriately for where it's substituted.
+|—
+|Values substituted into the template. See <<merge-tags>>.
 
 |`context`
 |`Record<string, string \| number \| boolean>`
-|Values used to evaluate xref:builder:visibility-rules.adoc[visibility rules].
+|—
+|Values that xref:builder:visibility-rules.adoc[visibility rules] are evaluated against. See <<context>>.
 
 |`minify`
 |`boolean`
-|Minify the output. Default `true`.
+|`true`
+|Collapse redundant whitespace. See <<minify>>.
 
 |`baseDir`
 |`string`
-|Base directory for resolving a relative template path. Default `process.cwd()`.
+|`process.cwd()`
+|Directory relative paths resolve against, and a security boundary. **Node only** — ignored in the browser/edge build, which never resolves a path. See <<paths>>.
 |===
 
-An unmatched merge tag is stripped from the output rather than left visible — worth knowing, since a typo'd tag name disappears silently instead of showing up in a test render.
+[#merge-tags]
+== Merge tags
 
-=== Errors
+**Tag names in the template must be group-qualified** — `{{ text.first_name }}`, not `{{ first_name }}`. The prefix tells the engine how to escape the substituted value, and an unprefixed tag will not resolve at all.
 
-All failures throw a `RenderError` with one of these codes:
+[source,typescript]
+----
+await render("welcome.json", {
+  mergeTags: {
+    text: { first_name: "Ada", plan: "Premium" },      // visible text
+    url:  { cta: "https://app.example.com/start" },     // href / src
+    attr: { hero_alt: "Product screenshot" },           // attribute values
+  },
+})
+----
 
-[cols="1,3", options=header]
+[cols="1,2,2", options=header]
 |===
-|Code|Meaning
+|Group|Substituted into|Escaping
+
+|`text`
+|Paragraphs, headings, buttons, list items
+|HTML-escaped
+
+|`url`
+|`href`, `src`
+|URL-encoded
+
+|`attr`
+|HTML attribute values
+|HTML-escaped
+|===
+
+The grouping is functional, not cosmetic. A URL placed in `text` is HTML-escaped rather than URL-encoded, and will break for any value containing `&`:
+
+[source,typescript]
+----
+// Wrong — the & becomes &amp; and the link loses its second parameter
+mergeTags: { text: { cta: "https://x.com/a?b=1&c=2" } }
+
+// Right
+mergeTags: { url:  { cta: "https://x.com/a?b=1&c=2" } }
+----
+
+WARNING: **A tag with no supplied value is removed, not left visible.** A typo in a tag name disappears silently rather than showing up in a test send. When a value must be present, assert on the rendered output in your tests rather than trusting a visual check.
+
+[source,typescript]
+----
+const html = await render(tpl, { mergeTags: { text: { first_name: name } } })
+
+// Cheap insurance against a renamed or misspelled tag
+if (!html.includes(name)) {
+  throw new Error("first_name did not render — check the tag name in the template")
+}
+----
+
+[#context]
+== Context and conditional content
+
+Rows and blocks can carry visibility rules set in the editor. `context` supplies the values those rules are evaluated against:
+
+[source,typescript]
+----
+await render("welcome.json", {
+  context: { plan: "premium", country: "NG", is_trial: false },
+})
+----
+
+Content whose conditions do not match is **omitted from the output entirely** — the rendered email contains only what that recipient should see. This is smaller and simpler than shipping every branch, and it means your ESP does not need to support conditional syntax at all.
+
+Context values are never injected into content. They only decide what is shown.
+
+[NOTE]
+====
+There are two places conditional content can be resolved, and it is worth choosing deliberately rather than by accident:
+
+* **Prune** (this package) — you evaluate now, from your own data. The email is smaller and the ESP needs no conditional support.
+* **Wrap** (xref:builder:exporting.adoc[editor export]) — every branch is kept and the ESP's own `{% if %}` syntax is emitted for it to evaluate at send time.
+
+Use prune when the personalisation data lives in your database; use wrap when it lives in the ESP. The renderer only does prune, because which syntax to emit depends on which ESP you selected in the editor.
+====
+
+[#minify]
+== Minification
+
+`minify` defaults to `true` and collapses redundant whitespace — indentation, blank lines, and runs of spaces.
+
+It deliberately does **not**:
+
+* strip or alter HTML, CSS or JS comments
+* remove, add, or change attribute quoting
+* rewrite attribute values
+* touch CSS property values, including media queries
+* remove any tag or content
+
+CAUTION: That first exclusion matters more than it looks. `+<!--[if mso]>+` is a comment that changes rendering — it is how Outlook fallbacks are delivered. A general-purpose HTML minifier that strips comments will silently break every Outlook fallback in your email. Check before running one over this output.
+
+React Email is handled differently from markup: per-line trimming, three-or-more blank lines collapsed to one, then trimmed. It is never collapsed onto a single line, because it is source code someone will read.
+
+[#paths]
+== Paths and the `baseDir` boundary
+
+_This section describes the Node build. In browsers and edge runtimes there is no filesystem, so `source` must always be an already-parsed template._
+
+Relative paths resolve against `baseDir`, which defaults to the process working directory. Absolute paths are always honoured as given — a caller writing an absolute path has stated their intent, and second-guessing it would break legitimate use.
+
+[source,typescript]
+----
+await render("welcome.json", { baseDir: "/srv/app/templates" })
+await render("/srv/app/templates/welcome.json")
+----
+
+[IMPORTANT]
+====
+**If a template name ever comes from user input, set `baseDir`.**
+
+[source,typescript]
+----
+// Without baseDir this is an arbitrary file read
+await render(req.query.template)
+
+// With it, anything resolving outside the directory is rejected
+await render(req.query.template, { baseDir: "/srv/app/templates" })
+----
+
+The check compares *resolved* paths rather than scanning the input for `..`, which is what makes it correct: it catches symlinks, percent-encoded traversal and nested tricks alike, because it asks where the path actually lands rather than what it looks like.
+====
+
+A missing-file error names the **resolved** path, not the input, since the useful question is usually which directory was searched.
+
+[#runtimes]
+== Runtimes
+
+The same import works unchanged everywhere. Your bundler picks the right build automatically through `package.json`'s https://nodejs.org/api/packages.html#conditional-exports[conditional exports] — there is nothing to configure.
+
+[source,typescript]
+----
+import { render } from "@maildeno/renderer"
+----
+
+[.table-scroll, cols="2,2,1", options=header]
+|===
+|Runtime|Selected by|Accepts a path?
+
+|Node {node-version}+
+|the `node` condition
+|Yes
+
+|Cloudflare Workers
+|the `workerd` condition — Wrangler sets it automatically
+|No
+
+|Vercel Edge Runtime
+|the `edge-light` condition
+|No
+
+|Browsers, via a bundler
+|the `browser` condition
+|No
+
+|Deno
+|the `deno` condition
+|No
+
+|Anything else
+|falls back to the browser/edge build
+|No
+|===
+
+Node gets a build that reads `engine.wasm` from disk. Everywhere else gets a build with the engine embedded as a base64 string — so it is still one `npm install`, still zero network calls, and still nothing to deploy as a separate asset.
+
+The neutral fallback is the edge build deliberately: it makes no assumptions about what is available, which is the conservative default.
+
+=== The one behavioural difference
+
+[source,typescript]
+----
+// Node — both work
+await render("templates/welcome.json")
+await render(templateObject)
+
+// Browser / Workers / Vercel Edge / Deno — only this
+await render(templateObject)
+----
+
+Read the template however makes sense for your runtime — `fetch()`, a KV/R2/Durable Object binding, a bundler JSON import — and pass the parsed object in.
+
+A string `source` throws `RenderError` with code `TEMPLATE_NOT_FOUND` and a message explaining what to do instead, rather than failing with something opaque like "fs is not defined". Silently trying `fetch()` on a bare string would reintroduce the network dependency this package is explicit about not having, and would be a surprising thing for a "path" argument to do.
+
+Every other option and every error code behaves identically.
+
+TIP: For a complete, deployable Cloudflare Workers example — template in KV, rendered at the edge, sent through an ESP — see xref:opensource:guide-render-workers.adoc[Rendering on Cloudflare Workers].
+
+=== Bundle size at the edge
+
+Embedding the engine as base64 costs about 33% over the raw file, working out to roughly **90 KB brotli-compressed** in your build. Worth comparing against Cloudflare's multi-megabyte Worker size limits before assuming it is a problem — it rarely is the constraint.
+
+If it genuinely is, and your bundler can hand you a compiled Wasm module more directly, `@maildeno/renderer/core` skips the embedded copy and takes an instance you supply:
+
+[source,typescript]
+----
+import mod from "@maildeno/renderer/engine.wasm"   // resolved by Wrangler
+import { renderWithInstance } from "@maildeno/renderer/core"
+
+const instance = await WebAssembly.instantiate(mod, {})
+const html = await renderWithInstance(instance, templateObject)
+----
+
+Validation, merge tags, context and minification all behave exactly as they do in `render()` — this only changes where the instance comes from. There is no `baseDir`, for the same reason as the edge build.
+
+CAUTION: This is a niche optimisation most deployments will not need. Reach for `render` first. The import shape above follows Wrangler's own documented `.wasm`-import behaviour; smoke-test it in your deployment before relying on it, the way you would for any bundler-specific import.
+
+== Errors
+
+Everything throws `RenderError`, which carries a machine-readable `code`:
+
+[source,typescript]
+----
+import { render, RenderError } from "@maildeno/renderer"
+
+try {
+  const html = await render("welcome.json")
+} catch (err) {
+  if (err instanceof RenderError) {
+    switch (err.code) {
+      case "TEMPLATE_NOT_FOUND": /* missing file, or a path at the edge */ break
+      case "INVALID_TEMPLATE":   /* bad JSON or wrong shape */ break
+      case "RENDER_ERROR":       /* the engine itself failed */ break
+    }
+  }
+  throw err
+}
+----
+
+[.table-scroll, cols="1,3", options=header]
+|===
+|Code|Raised when
 
 |`TEMPLATE_NOT_FOUND`
-|The given path doesn't exist.
+|The file is missing or unreadable; the path resolves outside `baseDir`; or `source` was a path string in the browser/edge build, which has no filesystem to read one from.
 
 |`INVALID_TEMPLATE`
-|The file isn't valid template JSON (wrong shape, unsupported `schema_version`).
+|The content is not valid JSON, is not an object, is missing a required field, has a field of the wrong type, or declares a `schema_version` newer than this renderer supports.
 
 |`RENDER_ERROR`
-|The engine failed to render the (validly-shaped) template.
+|`engine.wasm` could not be found, decoded or instantiated; or the engine reported a failure.
 |===
 
-== How this differs from the `maildeno` SDK
+Templates are validated **before** rendering, so missing fields and wrong types are reported by name rather than surfacing as an opaque failure from inside compiled Rust:
 
-Both render Maildeno templates in-process through the same WebAssembly engine, but they solve different problems:
+[source,text]
+----
+Template from /srv/app/templates/welcome.json is missing required
+field(s): canvas, rows. Expected a Maildeno template export
+({ template_id, template_name, canvas, rows, schema_version }).
+----
+
+=== Schema versions
+
+Versions are compared on the **major only**. `1.7` renders fine under a `1.x` renderer; `2.0` is rejected with a message telling you to upgrade. A minor bump means additive, backward-compatible changes — rejecting those would break templates that render perfectly well.
+
+== In practice
+
+[source,typescript]
+----
+import { render } from "@maildeno/renderer"
+import { Resend } from "resend"
+
+const resend = new Resend(process.env.RESEND_API_KEY)
+
+export async function sendWelcome(user: User) {
+  const html = await render("templates/welcome.json", {
+    baseDir: process.env.TEMPLATE_DIR,
+    mergeTags: {
+      text: { first_name: user.firstName, plan: user.plan },
+      url:  { cta: `https://app.example.com/onboarding?u=${user.id}` },
+    },
+    context: { plan: user.plan, is_trial: user.isTrial },
+  })
+
+  await resend.emails.send({
+    from: "hello@example.com",
+    to: user.email,
+    subject: `Welcome, ${user.firstName}`,
+    html,
+  })
+}
+----
+
+Rendering is local and synchronous in practice — no rate limits, no timeouts, and nothing to mock in tests. **Rendering per recipient inside a loop is fine.** If you are batching to avoid render cost, you are optimising the wrong thing: it is a Wasm function call over a few kilobytes of JSON.
+
+=== Testing rendered output
+
+Because rendering is a pure function with a large deterministic output, snapshot tests are an unusually good fit:
+
+[source,typescript]
+----
+import { expect, test } from "vitest"
+import { render } from "@maildeno/renderer"
+
+test("welcome email renders", async () => {
+  const html = await render("templates/welcome.json", {
+    mergeTags: { text: { first_name: "Ada" } },
+    context: { plan: "premium" },
+  })
+  expect(html).toMatchSnapshot()
+})
+----
+
+Run this on every pull request and a copy change that breaks a layout shows up in code review rather than in a customer's inbox.
+
+== Security posture
+
+[.table-scroll, cols="1,3", options=header]
+|===
+|Property|Detail
+
+|No network
+|Neither build makes an outbound request, ever. Nothing to firewall, nothing to allow-list.
+
+|No credentials
+|No API key exists anywhere in the surface area.
+
+|No dependencies
+|Zero runtime dependencies. Nothing transitive to audit.
+
+|Path containment
+|`baseDir` acts as a boundary. Resolved-path comparison catches symlinks and encoded traversal, not just a literal `..`.
+
+|Validated input
+|Loading and validation are not exported. There is no way to reach the engine with an unvalidated document.
+
+|Escaping by declaration
+|Escaping is decided by a tag's group, not guessed from its value.
+
+|Memory ceiling
+|The engine heap is capped and monitored per render.
+|===
+
+This combination is the reason the package tends to clear a vendor review quickly: there is no service to assess, no data flow to diagram, and no dependency tree to scan.
+
+== How this differs from the hosted SDK
+
+Both render Maildeno templates in-process through the same engine, but they solve different problems:
 
 [.table-scroll, cols="1,2,2", options=header]
 |===
@@ -129,21 +557,53 @@ Both render Maildeno templates in-process through the same WebAssembly engine, b
 
 |Network access
 |None — ever
-|One-time fetch per template (`GET /v1/sdk/template/{id}`), then cached and rendered in-process
+|One fetch per template per TTL window, then cached and rendered in-process
 
 |Input
-|A template JSON file on disk (or an in-memory object)
+|A template JSON file or in-memory object
 |A template ID — the SDK fetches the JSON for you
 
+|Runtimes
+|Node, browsers, Workers, Vercel Edge, Deno
+|Node and other server runtimes
+
+|Caching
+|Not applicable — nothing to cache
+|Memory and disk caches, stale-on-error fallback
+
 |Best for
-|CI, air-gapped environments, or any setup where the template already exists as a file and a live Maildeno account isn't part of the picture
+|CI, air-gapped environments, edge deployments, or any setup where the template already exists as a file
 |Apps where templates are managed in the hosted dashboard and referenced by ID at runtime
 |===
 
-They aren't mutually exclusive — see xref:opensource:overview.adoc#mix-and-match[Mix and match] on the Open Source overview page for ways to combine them.
+They are not mutually exclusive — see xref:opensource:overview.adoc#mix-and-match[Mix and match].
+
+=== Migrating from the `maildeno` SDK
+
+[source,typescript]
+----
+// Before — fetched over the network
+const client = new MaildenoClient({ apiKey: process.env.MAILDENO_API_KEY })
+const { output } = await client.render({
+  templateId: "welcome",
+  target: "html",
+  dynamicData: { merge_tags: { text: { name: "Noruwa" } } },
+})
+
+// After — local file
+const output = await render("templates/welcome.json", {
+  mergeTags: { text: { name: "Noruwa" } },
+})
+----
+
+`dynamicData: { merge_tags, context }` becomes `mergeTags` and `context` at the top level.
+
+Removed with no replacement, because none of it applies to local files: `apiKey`, `baseUrl`, `timeout`, all caching (`cache`, `listCached`, `deleteCached`, `clearCache`, `invalidate`), `fromStaleCache`, and the network error codes `INVALID_API_KEY`, `FORBIDDEN`, `NETWORK_ERROR` and `TIMEOUT`.
 
 == Where to go next
 
+* xref:opensource:renderer-edge.adoc[Browsers and edge runtimes] — the full runtime guide
+* xref:opensource:guide-render-workers.adoc[Rendering on Cloudflare Workers] — a complete deployable example
+* xref:opensource:template-schema.adoc[Template schema] — the JSON contract, field by field
 * xref:opensource:editor.adoc[`@maildeno/editor`] — produce the template JSON this package renders
-* xref:opensource:overview.adoc[Open Source overview] — how self-hosting relates to the hosted platform
-* https://github.com/maildeno/renderer-js[Source on GitHub]
+* {renderer-repo}[Source on GitHub]

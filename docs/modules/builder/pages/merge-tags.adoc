@@ -117,7 +117,8 @@ image::merge-tag-preview-on.PNG[Merge tag Preview On,role=center]
 
 [tabs]
 ====
-* JavaScript
+JavaScript::
++
 --
 [source,typescript]
 ----
@@ -144,7 +145,8 @@ await client.render({
 ----
 --
 
-* Python
+Python::
++
 --
 [source,python]
 ----

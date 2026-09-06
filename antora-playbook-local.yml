@@ -25,13 +25,33 @@ asciidoc:
     hide-uri-scheme: ''
     experimental: ''
     source-highlighter: highlight.js
+    idprefix: ''
+    idseparator: '-'
+    table-caption!: ''
+    # URL path placeholders like /v1/sdk/template/{id} are literal text,
+    # not attribute references. 'skip' leaves them intact and stops
+    # Asciidoctor warning about them on every build.
+    attribute-missing: 'skip'
+    figure-caption!: ''
+    # ── Versions — bump here on release ──────────────────────────────
     js-sdk-version: '2.1.0'
     py-sdk-version: '2.0.0'
-    editor-version: '0.1.1'
-    renderer-version: '0.1.0'
+    php-sdk-version: '2.0.0'
+    editor-version: '0.4.7'
+    renderer-version: '0.2.0'
+    template-schema-version: '1.0'
+    # ── Runtime floors ───────────────────────────────────────────────
+    node-version: '20'
+    python-version: '3.9'
+    php-version: '8.1'
+    # ── URLs ─────────────────────────────────────────────────────────
     api-base-url: 'https://api.maildeno.com'
     dashboard-url: 'https://maildeno.com/login'
+    site-url: 'https://maildeno.com'
     support-email: 'support@maildeno.com'
+    editor-repo: 'https://github.com/maildeno/editor'
+    renderer-repo: 'https://github.com/maildeno/renderer-js'
+    docs-repo: 'https://github.com/maildeno/docs'
   extensions:
     - '@asciidoctor/tabs'
 

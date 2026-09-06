@@ -1,5 +1,8 @@
 // modules/ROOT/nav.adoc
-* xref:index.adoc[Overview]
-* xref:quickstart.adoc[Quickstart]
-* xref:concepts.adoc[Core Concepts]
-* xref:changelog.adoc[Changelog]
+* Getting started
+** xref:index.adoc[Overview]
+** xref:quickstart.adoc[Quickstart]
+** xref:concepts.adoc[Core concepts]
+** xref:glossary.adoc[Glossary]
+** xref:troubleshooting.adoc[Troubleshooting]
+** xref:changelog.adoc[Changelog]

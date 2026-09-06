@@ -1,0 +1,177 @@
+= Glossary
+:description: Terms used across the Maildeno documentation, defined once.
+:keywords: maildeno glossary, email terminology, merge tag, visibility rule, prune, wrap
+
+[.lead]
+Terms as they are used in this documentation. Where a word has a general meaning in email or web development that differs from ours, both are noted.
+
+== Maildeno terms
+
+[.table-scroll, cols="1,3", options=header]
+|===
+|Term|Definition
+
+|**Adapter**
+|An object implementing `EditorStorageAdapter`, through which the editor reads and writes templates, versions, saved rows and images. Every method is optional. See xref:opensource:guide-storage-adapters.adoc[Storage adapters].
+
+|**Block**
+|A leaf content node — paragraph, heading, image, button. Registered in the block registry. Sometimes called a *component* in the document tree; they are the same thing.
+
+|**Canvas**
+|Two meanings, both ours. **(1)** The email body's own settings — width, padding, background, preheader, language — serialised as the `canvas` key of a template. **(2)** The editing surface in the editor UI. Neither is an HTML `<canvas>`.
+
+|**Capabilities**
+|An object that *restricts* what the editor's UI offers. It can only take away, never grant.
+
+|**Component**
+|A node in the document tree: `{ id, type, componentType?, props }`. Interchangeable with *block*.
+
+|**Context**
+|A flat key–value map supplied at render time, evaluated against visibility rules. Context values are never injected into content — they only decide what is shown.
+
+|**Document**
+|The template JSON — the five-key object the editor exports and the renderer consumes. See xref:opensource:template-schema.adoc[Template schema].
+
+|**Hydrate**
+|Restore stripped default values when a template is loaded. The inverse of *optimize*.
+
+|**Merge tag**
+|A group-qualified placeholder such as `{{ text.first_name }}`, replaced at render time. The prefix decides escaping.
+
+|**Optimize**
+|Strip every property equal to its default before serialising. The inverse of *hydrate*. The invariant is `hydrate(optimize(x)) ≡ x`.
+
+|**Prune**
+|Evaluate visibility rules now and emit only the matching branches. What `render()` always does.
+
+|**Render target**
+|An output format: `html`, `mjml`, or `react-email`.
+
+|**Row**
+|A horizontal band containing columns. Rows can nest, to a depth of 5.
+
+|**Row spacer**
+|A row whose only job is vertical space.
+
+|**Saved row**
+|A reusable row stored in a library. Two libraries exist: the user's own (writable) and a shared one (read-only).
+
+|**Schema version**
+|`major.minor` on a template. Only the major is enforced for compatibility.
+
+|**Snapshot**
+|`{ rows, canvasStyles, name?, tags?, updatedAt? }` — what the storage adapter persists. Not identical to a *document*.
+
+|**Teleport target**
+|An element inside the editor that all floating UI renders into, keeping it within the shadow root.
+
+|**Visibility rule**
+|A condition attached to a row or component, evaluated against context.
+
+|**Wrap**
+|Keep every conditional branch and emit the ESP's own syntax for it to evaluate at send time. The alternative to *prune*.
+|===
+
+== Email terms
+
+[.table-scroll, cols="1,3", options=header]
+|===
+|Term|Definition
+
+|**Alignment**
+|In DMARC: the requirement that the SPF- or DKIM-authenticated domain match the domain in the visible `From:` header. Authentication passing is not the same as aligning, and this is the most commonly missed distinction in email authentication.
+
+|**ARC**
+|Authenticated Received Chain. Preserves authentication results across forwarding hops, so a forwarded message can still be judged on its original authentication.
+
+|**BIMI**
+|Brand Indicators for Message Identification. Displays your logo beside the sender name in supporting clients. Requires DMARC at quarantine or reject, and often a paid certificate. Not a deliverability feature.
+
+|**Bulk sender**
+|Roughly 5,000 or more messages per day to a given provider's consumer addresses. Bulk senders face additional authentication, unsubscribe and complaint-rate requirements.
+
+|**Clipping**
+|Gmail truncating a message past roughly 102 KB and showing "View entire message". What gets cut is whatever is at the bottom — usually the unsubscribe link and tracking pixel.
+
+|**Dark mode strategy**
+|How a client alters colours in dark mode. Four distinct behaviours exist across major clients, ranging from "leave author colours alone" to "swap near-black and near-white" to "no handling at all".
+
+|**DKIM**
+|DomainKeys Identified Mail. The sending server signs the message with a private key; the public key is published in DNS. Survives forwarding, unlike SPF.
+
+|**DMARC**
+|A DNS policy stating what to do when SPF and DKIM both fail to align, plus a reporting address. Its reports are often more valuable than its policy.
+
+|**ESP**
+|Email Service Provider — Klaviyo, Mailchimp, Braze, SendGrid, Resend, Postmark, and so on. Maildeno is not an ESP; it produces the email and hands it to yours.
+
+|**Envelope sender**
+|The `MAIL FROM` address in the SMTP conversation. Distinct from the visible `From:` header, and the distinction is the basis of SPF-versus-DMARC alignment.
+
+|**MJML**
+|A markup language that compiles to responsive email HTML. One of Maildeno's three render targets.
+
+|**MSO conditional**
+|An `+<!--[if mso]>+` comment that only Microsoft clients act on. How Outlook fallbacks are delivered — which is why stripping comments from email HTML breaks Outlook.
+
+|**MTA**
+|Mail Transfer Agent — the server that actually moves mail. Postfix, Exim, and the sending infrastructure behind every ESP.
+
+|**One-click unsubscribe**
+|The `List-Unsubscribe` and `List-Unsubscribe-Post` **headers** (RFC 8058) that make a provider show a native Unsubscribe control. A footer link alone does not satisfy this.
+
+|**Preheader**
+|The short line shown after the subject in an inbox list. If unset, clients grab the first line of body copy instead.
+
+|**PTR record**
+|Reverse DNS for a sending IP. Set at the IP level rather than the domain level, which is why it is easy to forget after a migration.
+
+|**React Email**
+|A React-based email framework. One of Maildeno's three render targets — the output is `.tsx` source, not a rendered component.
+
+|**Spam rate**
+|The proportion of delivered messages recipients mark as spam. Providers publish thresholds; the practical target is well below the stated ceiling.
+
+|**SPF**
+|Sender Policy Framework. A DNS record listing which servers may send mail as your domain. Subject to a 10-DNS-lookup limit, and usually broken by forwarding.
+
+|**VML**
+|Vector Markup Language. Still the only way to render gradients and background images in Outlook desktop.
+
+|**Warmup**
+|Ramping send volume on a new IP or domain over weeks, starting with the most engaged recipients, so the first signals a provider sees are positive.
+|===
+
+== Technical terms
+
+[.table-scroll, cols="1,3", options=header]
+|===
+|Term|Definition
+
+|**Conditional exports**
+|A `package.json` feature letting one import specifier resolve to different files per runtime. How `@maildeno/renderer` ships a Node build and an edge build behind one import.
+
+|**Custom element**
+|A native browser component defined with `customElements.define`. `<maildeno-editor>` is one, which is why the editor works in any framework.
+
+|**Edge runtime**
+|A JavaScript runtime built on V8 isolates rather than containers — Cloudflare Workers, Vercel Edge, Deno Deploy. Fast to start, but with no filesystem and limited Node compatibility.
+
+|**Light DOM**
+|Ordinary page DOM, as opposed to shadow DOM. The editor's `shadowDom: false` mode, offered as an escape hatch when predictable DOM behaviour matters more than style isolation.
+
+|**Shadow DOM**
+|An encapsulated DOM subtree with its own style scope. The editor's default. It also retargets `event.target`, hides content from `document.querySelector`, and ignores `@font-face`.
+
+|**V8 isolate**
+|A lightweight, independent JavaScript execution context. What makes edge runtimes start in single-digit milliseconds where a container cannot.
+
+|**WebAssembly (Wasm)**
+|A portable binary instruction format. The Maildeno render engine is Rust compiled to Wasm, which is how output stays byte-identical across every runtime.
+|===
+
+== Where to go next
+
+* xref:concepts.adoc[Core concepts] — how these pieces fit together
+* xref:opensource:template-schema.adoc[Template schema] — the document format
+* xref:troubleshooting.adoc[Troubleshooting] — when something is not working

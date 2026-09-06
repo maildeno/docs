@@ -29,7 +29,7 @@ import { HttpClient } from "@angular/common/http";
 @Component({
   selector: "app-email-editor",
   standalone: true,
-  template: `<div #container style="height: 100vh"></div>`,
+  template: `<div #container></div>`,
 })
 export class EmailEditorComponent implements AfterViewInit, OnDestroy {
   @ViewChild("container") containerRef!: ElementRef<HTMLDivElement>;
@@ -41,6 +41,11 @@ export class EmailEditorComponent implements AfterViewInit, OnDestroy {
     this.handle = await init({
       container: this.containerRef.nativeElement,
       capabilities: { export: ["html", "mjml", "json"] },
+      onSave: (payload: { templateId: string | null }) => {
+        console.log("Saved", payload);
+        const target = handle?.getHtml(); // handle?.getReactEmail() or handle?.getMjml()
+        console.log(target);
+      },
       onSendTestEmail: async ({ to, subject, html }) => {
         await fetch("/api/send-test", {
           method: "POST",
@@ -48,10 +53,6 @@ export class EmailEditorComponent implements AfterViewInit, OnDestroy {
           body: JSON.stringify({ to, subject, html }),
         });
       },
-    });
-
-    this.handle.on("save", ({ templateId }) => {
-      console.log("saved:", templateId);
     });
   }
 

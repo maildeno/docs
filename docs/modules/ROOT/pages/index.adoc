@@ -160,7 +160,7 @@ IMPORTANT: Store the JSON, not the HTML. HTML is a build artifact — you will w
 
 == Packages
 
-[.table-scroll, cols="1,2,1", options=header]
+[.table-scroll, cols="2,3,1", options=header]
 |===
 |Package|What it does|Version
 

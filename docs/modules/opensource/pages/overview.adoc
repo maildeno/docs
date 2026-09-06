@@ -4,7 +4,7 @@
 [.lead]
 The same editor and rendering engine behind Maildeno are also available as open-source, MIT-licensed npm packages — no account, no API key, and no network access required.
 
-[cols="1,2,1", options=header]
+[cols="2,3,1", options=header]
 |===
 |Package|What it does|Version
 

@@ -40,7 +40,7 @@ image::vis-rule-pro.PNG[Visibility rule for pro users,role=center]
 [#operators]
 == Supported operators
 
-[.table-scroll, cols="1,3,2", options="header"]
+[.table-scroll, cols="1,2,2", options="header"]
 |===
 |Operator | Behaviour | Example
 

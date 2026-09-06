@@ -51,7 +51,7 @@ $result->fromStaleCache; // true if rendered from a stale cached copy
 
 === `render()` options array
 
-[.table-scroll, cols="1,1,1,3", options=header]
+[.table-scroll, cols="1,1,1,2", options=header]
 |===
 |Key|Type|Required|Description
 
@@ -73,7 +73,7 @@ $result->fromStaleCache; // true if rendered from a stale cached copy
 
 === `RenderResult`
 
-[.table-scroll, cols="1,1,3", options=header]
+[.table-scroll, cols="1,1,2", options=header]
 |===
 |Property|Type|Description
 

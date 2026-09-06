@@ -9,7 +9,7 @@ Multiple export formats on a single template design: **HTML**, **React Email** a
 
 == Render targets
 
-[.table-scroll, cols="1,2,3", options=header]
+[.table-scroll, cols="1,1,2", options=header]
 |===
 |Target string|Format|Best for
 

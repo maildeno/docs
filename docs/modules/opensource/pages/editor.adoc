@@ -112,11 +112,9 @@ export default function Editor() {
   useEffect(() => {
     let cancelled = false
 
-    init({ container: container.current! }).then((h) => {
-      // React 18 StrictMode mounts effects twice in development.
-      // Without this guard the first instance is orphaned and never destroyed.
-      if (cancelled) return h.destroy()
-      handle.current = h
+    init({ 
+      container: container.current!,
+      onSave: ({ templateId }) => console.log("saved", templateId),
     })
 
     return () => {
@@ -125,14 +123,14 @@ export default function Editor() {
     }
   }, [])
 
-  return <div ref={container} style={{ height: "100vh" }} />
+  return <div ref={container} />
 }
 ----
 
 .Plain HTML — no build step
 [source,html]
 ----
-<div id="editor" style="height: 100vh"></div>
+<div id="editor"></div>
 
 <script type="module">
   import { init } from "@maildeno/editor/init"
@@ -173,7 +171,6 @@ const storageAdapter: PartialStorageAdapter = { /* … */ }
     :storage-adapter="storageAdapter"
     :capabilities="{ export: ['html', 'mjml', 'react', 'json'] }"
     color-mode="auto"
-    style="height: 100vh"
     @save="({ templateId }) => console.log(templateId)"
     @ready="() => console.log('canvas painted')"
   />
@@ -271,7 +268,7 @@ CAUTION: Vue's `defineCustomElement` treats props beginning with `on` as event l
 
 == Options
 
-[.table-scroll, cols="1,2,3", options=header]
+[.table-scroll, cols="2,2,3", options=header]
 |===
 |Option|Type|Description
 
@@ -487,7 +484,7 @@ The editor is desktop-only and shows a notice below the breakpoint rather than a
 
 Four registries. All are module-level — **call them at import time, not inside a component.**
 
-[.table-scroll, cols="1,3", options=header]
+[.table-scroll, cols="1,2", options=header]
 |===
 |Registry|Purpose
 

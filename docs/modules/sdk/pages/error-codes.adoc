@@ -5,7 +5,7 @@ All errors from the Maildeno SDKs and REST API use a consistent `code` field for
 
 == Complete error code table
 
-[.table-scroll, cols="1,1,3,3", options=header]
+[.table-scroll, cols="2,1,2,2", options=header]
 |===
 |Code|HTTP status|Cause|Resolution
 

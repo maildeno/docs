@@ -9,7 +9,7 @@ Conditional content can be resolved by Maildeno before sending, or emitted as yo
 
 Two modes, and choosing deliberately matters more than which one you pick.
 
-[.table-scroll, cols="1,2,2", options=header]
+[.table-scroll, cols="1,1,1", options=header]
 |===
 | |Prune|Wrap
 
@@ -177,7 +177,7 @@ The one genuine crash was an unconditional metadata lookup: reading `supportsNes
 
 === What the generic fallback covers
 
-[cols="1,3", options=header]
+[cols="1,2", options=header]
 |===
 |Operator|Generic fallback quality
 

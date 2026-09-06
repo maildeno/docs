@@ -240,7 +240,7 @@ IMPORTANT: A contract includes the copy the UI shows the user. If your implement
 
 Two libraries, deliberately asymmetric.
 
-[cols="1,3", options=header]
+[cols="1,2", options=header]
 |===
 |Method|Library
 

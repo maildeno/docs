@@ -29,7 +29,7 @@ Expected a Maildeno template export
 ({ template_id, template_name, canvas, rows, schema_version }).
 ----
 
-[.table-scroll, cols="1,1,3", options=header]
+[.table-scroll, cols="1,1,2", options=header]
 |===
 |Field|Type|Description
 
@@ -70,7 +70,7 @@ renderer supports (1.x). Upgrade @maildeno/renderer.
 
 Email-body settings. Every key has a default, so a minimal canvas is `{}`.
 
-[.table-scroll, cols="1,1,1,3", options=header]
+[.table-scroll, cols="2,1,1,2", options=header]
 |===
 |Key|Type|Default|Description
 

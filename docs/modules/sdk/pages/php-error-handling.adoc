@@ -22,7 +22,7 @@ NOTE: PHP's `\Exception` already declares an `int $code` property. `MaildenoErro
 
 == Status mapping
 
-[.table-scroll, cols="1,1,3", options=header]
+[.table-scroll, cols="1,2,2", options=header]
 |===
 |HTTP status|Code|Notes
 

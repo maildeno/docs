@@ -64,7 +64,7 @@ NOTE: `Canvas` here is the email body's own settings — width, padding, backgro
 
 For the Vue-component path. `init()` accepts the same options under slightly different names where noted.
 
-[.table-scroll, cols="1,2,1,3", options=header]
+[.table-scroll, cols="2,2,1,3", options=header]
 |===
 |Prop|Type|Default|Description
 
@@ -172,7 +172,7 @@ The Shared tab of the saved-rows panel is read-only for everyone regardless, bec
 
 == Slots
 
-[cols="1,2,2", options=header]
+[cols="1,1,2", options=header]
 |===
 |Slot|Props|Purpose
 

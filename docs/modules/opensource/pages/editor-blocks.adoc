@@ -38,7 +38,7 @@ registerBlock({
 })
 ----
 
-[.table-scroll, cols="1,1,3", options=header]
+[.table-scroll, cols="2,1,3", options=header]
 |===
 |Field|Required|Purpose
 
@@ -146,7 +146,7 @@ interface BlockRenderContext {
 }
 ----
 
-[cols="1,3", options=header]
+[cols="1,2", options=header]
 |===
 |Helper|Use for
 

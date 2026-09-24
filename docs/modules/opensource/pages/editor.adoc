@@ -99,6 +99,11 @@ const editor: EditorHandle = await init({
 })
 ----
 
+[NOTE]
+====
+`onSave`'s *presence* is what reveals the Save button, the save-status indicator, and the autosave timer — not just what runs when it's clicked. Omit it and the editor mounts **read-only**, which is useful for previews or guest embeds but easy to trip over unintentionally. The Vue component's `@save` listener is the same mechanism — Vue compiles `@save="fn"` to an `onSave` prop internally, so there is only one behaviour to know, not two. See xref:opensource:editor-api.adoc[Editor API reference] for the full breakdown.
+====
+
 .React
 [source,tsx]
 ----

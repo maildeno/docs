@@ -1,11 +1,11 @@
 = Changelog
 :description: Release history for Maildeno and its SDKs.
 
-All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The JavaScript/TypeScript, Python, and PHP SDKs are versioned independently — the JS SDK is currently at **v2.1.6**, the Python SDK at **v2.0.6**, and the PHP SDK at **v1.0.3**.
+All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The JavaScript/TypeScript, Python, and PHP SDKs are versioned independently — the JS SDK is currently at **v2.1.7**, the Python SDK at **v2.0.7**, and the PHP SDK at **v1.0.4**.
 
 Entries are grouped by release date. Where multiple SDKs shipped the same change on the same day, they're listed together under one heading instead of being repeated per SDK; where SDKs shipped different changes on the same day, each gets its own subsection.
 
-== 2026-08-24
+== 2026-09-20
 
 **Maildeno Editor** · **Renderer** 
 
@@ -19,6 +19,16 @@ Entries are grouped by release date. Where multiple SDKs shipped the same change
 * **`@maildeno/renderer`** — a new, MIT-licensed npm package that renders a template JSON file to HTML, MJML, or React Email entirely offline. No API key, no network call, no Maildeno account. Reads the same template JSON format the hosted SDKs and REST API already use.
 
 See xref:opensource:overview.adoc[Open Source] for full documentation.
+
+== 2026-09-20
+
+**JavaScript/TypeScript v2.1.7** · **Python v2.0.7** · **PHP v1.0.4**
+
+=== Rendering engine updated (JavaScript/TypeScript, Python, PHP)
+
+==== Fixed
+
+**Button and Anchor components – padding is now applied to the clickable link element.** Moved padding from the container <div> to the <a> / <Link> element across the HTML, MJML, and React Email renderers. Generated styles now target the .{uid}-link selector for Button and Anchor padding.
 
 == 2026-08-21
 

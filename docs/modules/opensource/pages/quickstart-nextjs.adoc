@@ -25,39 +25,33 @@ A `"use client"` component still gets rendered once on the server for the initia
 import { useEffect, useRef } from "react";
 import { init, type EditorHandle } from "@maildeno/editor/init";
 
-export default function EmailEditor({ templateId }: { templateId?: string }) {
+export default function Editor() {
   const container = useRef<HTMLDivElement>(null);
   const handle = useRef<EditorHandle | null>(null);
-  const initialized = useRef(false);
 
   useEffect(() => {
-    const el = container.current;
-
-    if (!el || initialized.current) {
-      return;
-    }
-
-    initialized.current = true;
-
     let cancelled = false;
 
     const setup = async () => {
       try {
         const editor = await init({
-          container: el,
+          container: container.current!,
           templateId,
           capabilities: {
             export: ["html", "react-email", "mjml", "json"],
           },
           onSave: ({ templateId }) => {
             console.log("Saved", templateId);
+
             const html = handle.current?.getHtml(); // handle.current?.getReactEmail() or handle.current?.getMjml()
             console.log("HTML:", html);
           },
           onSendTestEmail: async ({ to, subject, html }) => {
             await fetch("/api/send-test", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+              },
               body: JSON.stringify({ to, subject, html }),
             });
           },
@@ -80,14 +74,8 @@ export default function EmailEditor({ templateId }: { templateId?: string }) {
 
     return () => {
       cancelled = true;
-
       handle.current?.destroy();
       handle.current = null;
-
-      // If init() already mounted the editor, make sure no DOM remains.
-      el.replaceChildren();
-
-      initialized.current = false;
     };
   }, [templateId]);
 

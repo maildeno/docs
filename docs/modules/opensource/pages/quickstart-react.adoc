@@ -23,42 +23,34 @@ import { init, type EditorHandle } from "@maildeno/editor/init";
 export default function Editor() {
   const container = useRef<HTMLDivElement>(null);
   const handle = useRef<EditorHandle | null>(null);
-  const initialized = useRef(false);
 
   useEffect(() => {
-    const el = container.current;
-
-    if (!el || initialized.current) {
-      return;
-    }
-
-    initialized.current = true;
-
     let cancelled = false;
 
     const setup = async () => {
       try {
         const editor = await init({
-          container: el,
+          container: container.current!,
           capabilities: {
             export: ["html", "mjml", "json"],
           },
           onSave: ({ templateId }) => {
             console.log("Saved", templateId);
+
             const html = handle.current?.getHtml(); // handle.current?.getReactEmail() or handle.current?.getMjml()
             console.log("HTML:", html);
           },
           onSendTestEmail: async ({ to, subject, html }) => {
             await fetch("/api/send-test", {
               method: "POST",
-              headers: { "Content-Type": "application/json"},
+              headers: {
+                "Content-Type": "application/json",
+              },
               body: JSON.stringify({ to, subject, html }),
             });
           },
         });
 
-        // React StrictMode may have already cleaned up while init() was
-        // awaiting the custom element to mount.
         if (cancelled) {
           editor.destroy();
           return;
@@ -76,14 +68,8 @@ export default function Editor() {
 
     return () => {
       cancelled = true;
-
       handle.current?.destroy();
       handle.current = null;
-
-      // If init() already mounted the editor, make sure no DOM remains.
-      el.replaceChildren();
-
-      initialized.current = false;
     };
   }, []);
 

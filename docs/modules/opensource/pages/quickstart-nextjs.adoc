@@ -38,7 +38,7 @@ export default function Editor() {
           container: container.current!,
           templateId,
           capabilities: {
-            export: ["html", "react-email", "mjml", "json"],
+            export: ["html", "react", "mjml", "json"],
           },
           onSave: ({ templateId }) => {
             console.log("Saved", templateId);

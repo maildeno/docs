@@ -1,9 +1,43 @@
 = Changelog
 :description: Release history for Maildeno and its SDKs.
 
-All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The Editor, JavaScript/TypeScript, Python, and PHP SDKs are versioned independently — the Editor is currently at **v0.4.14**, the JS SDK is currently at **v2.2.0**, the Python SDK at **v2.1.0**, and the PHP SDK at **v1.1.0**.
+All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The Editor, JavaScript/TypeScript, Python, and PHP SDKs are versioned independently — the Editor is currently at **v{editor-version}**, the JS SDK is currently at **{js-sdk-version}**, the Python SDK at **{py-sdk-version}**, and the PHP SDK at **{php-sdk-version}**.
 
 Entries are grouped by release date. Where multiple SDKs shipped the same change on the same day, they're listed together under one heading instead of being repeated per SDK; where SDKs shipped different changes on the same day, each gets its own subsection.
+
+== 2026-11-08
+
+**Maildeno Editor** 
+
+=== The editor and renderer are now open source
+
+**@maildeno/editor v{editor-version}**
+
+==== Added
+
+**You can set a column's width from the Column panel.** Select a column and open the Column tab: the new **Width** section has a slider and a number box, a strip that shows every column's share of the row, and an **Equalize** button. When a row has several columns, the others share what is left in proportion to their widths, so the row always adds up to 100%. A single column always fills the row. The Column 1, Column 2 and Column 3 tabs show each width under their name, and a nested row's columns work the same way.
+++++
+<br/>
+++++
+Widths are whole percentages, and a column can be as narrow as 5% and as wide as the others leave it (90% in a row of three). Typing a number outside that range is corrected when you leave the box. One drag of the slider is one undo step. A row with decimal widths (from Custom widths in the Layout tab) is rounded to whole percentages the first time you change one of its columns. Width is a desktop setting, so the Mobile tab shows a note instead of controls: a row that stacks shows its columns at full width on mobile.
+++++
+<br/>
+++++
+A row whose columns do not add up to 100%, such as one from an older template, shows a note with a **Fix to 100%** button, because the canvas and the exported email lay such a row out differently. Changing any of its columns repairs it too.
+
+Inside the editor, `useEmailBuilder()` has a new `setColumnWidths(rowId, widths, debounced?)`. It takes one width per column, repairs them to whole percentages that add up to 100, and returns whether the row changed. The rules are in `core/columnWidths.ts`.
+
+==== Fixed
+
+**The Merge Tag and Link Tag tabs no longer clear when you switch to another tab.** The tag names and preview values you had typed, the Preview switch and which sections were open or collapsed were lost as soon as you opened another tab: Merge Tag to Link Tag, Tags to Styles, or General to Content. Preview could also be left on with nothing to turn it off. After you came back, the switch said "Preview OFF" and was disabled, while the canvas was still showing the preview values.
+++++
+<br/>
+++++
+They now stay for as long as the editor is open. The sidebar also remembers which tab you were on at each level, so coming back to General opens Tags where you left it. The values are sample data for previewing, so they are not saved in the template and are gone when the page is reloaded. Two editors on one page do not share them.
+++++
+<br/>
+++++
+The cause was that each tab is removed from the page while another one is open, and the two tag tabs kept their data in the component, so it went with it. The data now lives in the editor instance, next to the other preview state (`sidebarUi`, on what `useEmailBuilder()` returns), and a tab opened while the preview is on starts with the switch on.
 
 == 2026-11-02
 
@@ -11,7 +45,7 @@ Entries are grouped by release date. Where multiple SDKs shipped the same change
 
 === Selects follow the selected block's value
 
-**@maildeno/editor v{editor-version}**
+**@maildeno/editor v0.4.14**
 
 ==== Fixed
 
@@ -49,7 +83,7 @@ The cause was two copies of the selection that never followed the parent. `Selec
 
 === Mobile overrides for rows, columns, and row spacers
 
-**@maildeno/editor v{editor-version}**
+**@maildeno/editor v0.4.13**
 
 ==== Added
 
@@ -89,7 +123,7 @@ The cause was two copies of the selection that never followed the parent. `Selec
 
 === The editor and renderer are now open source
 
-**@maildeno/editor v{editor-version}** · **@maildeno/renderer v{renderer-version}**
+**@maildeno/editor** · **@maildeno/renderer**
 
 ==== Added
 

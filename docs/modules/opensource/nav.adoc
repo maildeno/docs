@@ -11,6 +11,8 @@
 *** xref:opensource:renderer.adoc[@maildeno/renderer]
 *** xref:opensource:renderer-edge.adoc[Browsers {amp} edge runtimes]
 ** xref:opensource:template-schema.adoc[Template schema]
+** Kit
+*** xref:opensource:kit.adoc[Use Maildeno with AI]
 ** Framework guides
 *** xref:opensource:examples.adoc[Overview]
 *** xref:opensource:quickstart-react.adoc[React]

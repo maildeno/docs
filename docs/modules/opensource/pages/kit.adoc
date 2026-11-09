@@ -1,0 +1,80 @@
+= Use Maildeno with AI
+
+Ask an AI tool for an email and get back a finished, checked Maildeno email: the design as Maildeno JSON, and the HTML to send. The AI tool does the work. Maildeno serves a set of instructions and starter templates at https://maildeno.com/kit[maildeno.com/kit] and nothing more: no account, no API key, and no request to Maildeno while the email is rendered.
+
+// After the three tools have been tried, add a short "Tested with" list here.
+
+[quote]
+____
+*Beta.* The kit is new. It is built for AI tools that can open a web page and run Node.js, and it is still being tried in more tools. If something breaks, tell us which tool you used and what it printed.
+____
+
+== Try it
+
+Paste this into your AI tool:
+
+[source,text]
+----
+Read https://maildeno.com/kit and follow it to make me a welcome email for my bakery.
+----
+
+Swap in your own request. You can also add a style ("dark, editorial, big photos"), a website to take colours and a logo from, or image links to use.
+
+== What the tool does
+
+. Reads the instructions at `/kit`.
+. Picks a starter template as a reference, or uses a Maildeno JSON file you give it.
+. Designs your email. A template is a reference, not a mould: layout, rows and columns, colours, fonts and copy are all open to change.
+. Finds real images (an email about a Ford gets real Ford photos), or uses the links you gave it.
+. Installs the newest `@maildeno/renderer` in a scratch folder and renders the email.
+. Checks the HTML for failures the renderer never reports (missing styles, unfilled links, broken image URLs, SVG images and more), fixes them and renders again.
+. Shows you the preview and tells you which files it made.
+
+You get three files:
+
+[%header]
+|===
+| File | What it is
+| `email.html` | The HTML to send. Merge tags are kept as `+{{ name }}+`.
+| `preview.html` | The same email with sample values filled in, for looking at.
+| `email.json` | The design. Open it in the Maildeno editor with *Import JSON*.
+|===
+
+== Start from your own design
+
+Export a template from the Maildeno editor as JSON and give it to the tool in the same message. It uses your JSON as the reference instead of a starter template, and it may restyle or restructure it unless you ask it not to.
+
+== If the tool cannot run Node.js
+
+Some chat tools cannot run code. Then the tool writes the JSON, says plainly that it could not render or check it, and you paste the JSON into the editor with *Import JSON*. The editor renders it.
+
+== If the tool cannot open the template links
+
+Some chat tools open only the links you typed yourself. If one cannot open the template list, the instructions tell it not to stop: it builds the email from the format described on the page, with no starter template, and says so. To steer it, paste the JSON of one of your own emails (exported from the editor) in the same message, or type the template list's address, `https://maildeno.com/kit/templates/index.json`, into your message.
+
+== Images
+
+Maildeno hosts no images for this. The tool finds them online (Unsplash, Pexels and Pixabay are preferred) or uses links you give it, and checks that each link answers with an image. Before a real send, upload the images to your own host or CDN and replace the links, and check each photo's licence. Social icons are Tabler PNGs from a pinned CDN address unless you ask for another set.
+
+== Merge tags
+
+A value that changes per recipient, such as a first name, is written as a merge tag. `email.html` keeps it as `+{{ first_name }}+` for your sending system to fill, and `preview.html` shows a sample value. A tag inside a link field must end in `_url`.
+
+== Limits worth knowing
+
+* It needs Node.js 18 or newer on the machine where the tool runs code.
+* The tool picks the images and the copy. Read both before you send.
+* Outlook shows no background images, and no mail client is guaranteed to show SVG images, so the tool uses PNG or JPG.
+* How good the result is depends on the AI tool. If a failure survives three tries, the tool stops and tells you what is wrong.
+
+== For developers
+
+[%header]
+|===
+| URL | What it returns
+| `/kit` | The instructions, as plain text.
+| `/kit/templates/index.json` | The list of starter templates.
+| `/kit/templates/<file>` | One template, as Maildeno JSON.
+|===
+
+The renderer is not pinned: the instructions tell the tool to install the newest `@maildeno/renderer`. See the link:./renderer.md[renderer docs] for the package itself.

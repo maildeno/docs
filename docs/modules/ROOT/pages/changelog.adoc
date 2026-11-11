@@ -1,9 +1,45 @@
 = Changelog
 :description: Release history for Maildeno and its SDKs.
 
-All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The Editor, JavaScript/TypeScript, Python, and PHP SDKs are versioned independently — the Editor is currently at **v{editor-version}**, the JS SDK is currently at **{js-sdk-version}**, the Python SDK at **{py-sdk-version}**, and the PHP SDK at **{php-sdk-version}**.
+All notable changes to Maildeno are documented here. Maildeno follows https://semver.org[Semantic Versioning]. The Editor, JavaScript/TypeScript, Python, and PHP SDKs are versioned independently — the Editor is currently at **v{editor-version}**, the local JS Renderer at **v{renderer-version}**, the JS SDK is currently at **{js-sdk-version}**, the Python SDK at **{py-sdk-version}**, and the PHP SDK at **{php-sdk-version}**.
 
 Entries are grouped by release date. Where multiple SDKs shipped the same change on the same day, they're listed together under one heading instead of being repeated per SDK; where SDKs shipped different changes on the same day, each gets its own subsection.
+
+== 2026-11-11
+
+**Maildeno Editor**
+
+=== Long words no longer overflow the email body
+
+**@maildeno/editor v0.4.16**
+
+==== Fixed
+
+**Long words no longer overflow the email body.** A long unbroken token — a URL, a tracking ID, a hash — ran past the edge of the body in all three exports and made the message scroll sideways on narrow screens. The body now breaks long words in HTML, MJML and React Email alike.
+
+Each output needed its own fix. In HTML the rule goes on the body element. In MJML it goes in an `<mj-style>` block, because `mj-body` drops an inline `style` attribute. In React Email it goes on the container's style object as `wordBreak: "break-all"`.
+
+`word-break: break-all` breaks wherever a line runs out of room, so a long word is split mid-word rather than pushed past the edge. The catch is that it applies to every word, not only the ones that would overflow: a normal word at the end of a full line may now be split too. Outlook desktop ignores the property, so there a long token can still overflow — nothing changes for that client.
+
+++++
+<br/>
+++++
+
+**Removed unused padding from the Divider container in the editor.** The container already has its margin explicitly controlled, so applying component padding introduced unnecessary spacing around the divider when selected.
+
+++++
+<br/>
+++++
+
+**Opensource Renderer v0.3.2** · **JavaScript/TypeScript v2.2.1** · **Python v2.1.2** · **PHP v1.1.1**
+
+=== Rendering engine updated (Opensource Renderer, JavaScript/TypeScript, Python, PHP)
+
+==== Fixed
+
+**Long words no longer overflow the email body.** A long unbroken token — a URL, a tracking ID, a hash — could extend beyond the email body's boundaries and cause horizontal scrolling on narrow screens. The HTML, MJML and React Email renderers now apply `word-break: break-all` to the body container, ensuring long tokens wrap instead of overflowing.
+
+The rule splits words wherever necessary to fit the available width, including normal words at the end of a full line. Outlook desktop does not support this property, so long tokens may still overflow in that client.
 
 == 2026-11-08
 
@@ -11,7 +47,7 @@ Entries are grouped by release date. Where multiple SDKs shipped the same change
 
 === The editor and renderer are now open source
 
-**@maildeno/editor v{editor-version}**
+**@maildeno/editor v0.4.15**
 
 ==== Added
 
@@ -61,9 +97,9 @@ The cause was two copies of the selection that never followed the parent. `Selec
 
 == 2026-11-01
 
-**JavaScript/TypeScript v2.2.0** · **Python v2.1.0** · **PHP v1.1.0**
+**Opensource Renderer v0.3.1** · **JavaScript/TypeScript v2.2.0** · **Python v2.1.0** · **PHP v1.1.0**
 
-=== Rendering engine updated (JavaScript/TypeScript, Python, PHP)
+=== Rendering engine updated (Opensource Renderer, JavaScript/TypeScript, Python, PHP)
 
 ==== Added
 

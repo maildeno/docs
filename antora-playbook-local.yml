@@ -34,11 +34,11 @@ asciidoc:
     attribute-missing: 'skip'
     figure-caption!: ''
     # ── Versions — bump here on release ──────────────────────────────
-    js-sdk-version: '2.3.0'
-    py-sdk-version: '2.2.0'
-    php-sdk-version: '1.2.0'
-    editor-version: '0.4.19'
-    renderer-version: '0.4.0'
+    js-sdk-version: '2.3.1'
+    py-sdk-version: '2.2.1'
+    php-sdk-version: '1.2.1'
+    editor-version: '0.4.20'
+    renderer-version: '0.4.1'
     template-schema-version: '1.0'
     # ── Runtime floors ───────────────────────────────────────────────
     node-version: '20'

@@ -42,7 +42,7 @@ asciidoc:
     js-sdk-version: '2.3.1'
     py-sdk-version: '2.2.1'
     php-sdk-version: '1.2.1'
-    editor-version: '0.4.20'
+    editor-version: '0.4.21'
     renderer-version: '0.4.1'
     template-schema-version: '1.0'
     # ── Runtime floors ───────────────────────────────────────────────
